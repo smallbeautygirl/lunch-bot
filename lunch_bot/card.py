@@ -1,0 +1,132 @@
+"""Adaptive Card payloads for the Teams Workflow webhook. A real @mention only
+notifies when it is declared in msteams.entities — plain "@name" text does not."""
+
+from __future__ import annotations
+
+import re
+from datetime import date
+from urllib.parse import quote
+
+from .config import LUNCH_MAP_BASE_URL
+from .content import DailyContent
+from .picker import Candidate
+from .travel import TravelMode
+
+WEEKDAY_NAMES = "一二三四五六日"
+RATING_IN_NOTE = re.compile(r"Google ([\d.]+)★")
+TRAVEL_LABELS = {TravelMode.WALK: "🚶 走路", TravelMode.DRIVE: "🚗 開車"}
+
+
+def _text(text: str, **style: object) -> dict:
+    return {"type": "TextBlock", "text": text, "wrap": True, **style}
+
+
+def _rating(shop: dict) -> str | None:
+    if shop.get("googleRating"):
+        return str(shop["googleRating"])
+    match = RATING_IN_NOTE.search(shop.get("note") or "")
+    return match.group(1) if match else None
+
+
+def _map_url(shop: dict) -> str:
+    query = quote(f"{shop['name']} {shop.get('addr') or ''}".strip())
+    return f"https://www.google.com/maps/search/?api=1&query={query}"
+
+
+def _candidate_blocks(index: int, candidate: Candidate) -> list[dict]:
+    shop, travel = candidate.shop, candidate.travel
+    facts = ["、".join(shop["category"])]
+    facts.append("$" * shop["price"] if shop.get("price") else "價位未知")
+    if rating := _rating(shop):
+        facts.append(f"⭐ {rating}")
+    facts.append(f"{TRAVEL_LABELS[travel.mode]} {travel.minutes} 分")
+    return [
+        _text(
+            f"**{index}. {shop['name']}**　[地圖]({_map_url(shop)})", spacing="Medium"
+        ),
+        _text(" · ".join(facts), isSubtle=True, spacing="None"),
+    ]
+
+
+def _extra_blocks(content: DailyContent) -> list[dict]:
+    blocks = []
+    if content.joke:
+        blocks.append(_text(f"😂 **今日笑話**\n\n{content.joke}", separator=True))
+    if lesson := content.english:
+        blocks.append(
+            _text(
+                f"📖 **每日一句英文**\n\n{lesson.sentence}\n\n{lesson.translation}\n\n"
+                f"🔑 **{lesson.keyword}**：{lesson.keyword_meaning}",
+                separator=True,
+            )
+        )
+    if content.trivia:
+        blocks.append(_text(f"💡 **冷知識**\n\n{content.trivia}", separator=True))
+    return blocks
+
+
+def _wrap(body: list[dict], entities: list[dict] | None = None) -> dict:
+    card = {
+        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+        "type": "AdaptiveCard",
+        "version": "1.4",
+        "body": body,
+        "actions": [
+            {
+                "type": "Action.OpenUrl",
+                "title": "打開午餐地圖",
+                "url": LUNCH_MAP_BASE_URL,
+            }
+        ],
+        "msteams": {"width": "Full", "entities": entities or []},
+    }
+    return {
+        "type": "message",
+        "attachments": [
+            {"contentType": "application/vnd.microsoft.card.adaptive", "content": card}
+        ],
+    }
+
+
+def _chief_blocks(chief: tuple[str, str] | None) -> tuple[list[dict], list[dict]]:
+    closing = "今天不在的話，第一個回覆的人決定 🙋"
+    if chief is None:
+        return [_text(f"午餐長請拍板！{closing}", separator=True)], []
+    email, name = chief
+    mention = f"<at>{name}</at>"
+    entity = {
+        "type": "mention",
+        "text": mention,
+        "mentioned": {"id": email, "name": name},
+    }
+    return [_text(f"{mention} 午餐長請拍板！{closing}", separator=True)], [entity]
+
+
+def build_workday_card(
+    *,
+    day: date,
+    sign: str,
+    content: DailyContent,
+    picks: list[Candidate],
+    chief: tuple[str, str] | None,
+    cached_on: str | None,
+) -> dict:
+    title = f"🍱 午餐吃什麼？ {day.month}/{day.day}（{WEEKDAY_NAMES[day.weekday()]}）"
+    body = [_text(title, size="Large", weight="Bolder")]
+    if content.fortune:
+        body.append(_text(f"🔮 **今日幸運星座：{sign}**\n\n{content.fortune}"))
+    for index, candidate in enumerate(picks, start=1):
+        body += _candidate_blocks(index, candidate)
+    if not picks:
+        body.append(_text("今天找不到符合條件的店，請午餐長自由發揮 🙏"))
+    if cached_on:
+        body.append(
+            _text(f"⚠️ 午餐地圖暫時連不上，店家資料是 {cached_on} 的快取", isSubtle=True)
+        )
+    chief_body, entities = _chief_blocks(chief)
+    return _wrap(body + chief_body + _extra_blocks(content), entities)
+
+
+def build_holiday_card(*, day: date, content: DailyContent) -> dict:
+    title = f"🎉 {day.month}/{day.day} 放假快樂！"
+    return _wrap([_text(title, size="Large", weight="Bolder"), *_extra_blocks(content)])

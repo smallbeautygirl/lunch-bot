@@ -1,0 +1,61 @@
+name: Lunch bot
+
+on:
+  schedule:
+    # 03:00 UTC = 11:00 Asia/Taipei. GitHub may start scheduled runs late.
+    # Runs every day: the script itself skips weekends and handles 補班.
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the card instead of posting"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lunch-bot
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      # Last good lunch-map snapshot, used if the site is down. Kept in the
+      # Actions cache, not the repo, so the public repo doesn't republish the
+      # site's shop data. restore-keys picks the newest earlier snapshot.
+      - uses: actions/cache@v4
+        with:
+          path: data/shops_cache.json
+          key: lunch-map-${{ github.run_id }}
+          restore-keys: lunch-map-
+      - name: Post lunch suggestion
+        env:
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LUNCH_CHIEF_EMAIL: ${{ secrets.LUNCH_CHIEF_EMAIL }}
+          LUNCH_CHIEF_NAME: ${{ vars.LUNCH_CHIEF_NAME }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python -m lunch_bot.main --dry-run
+          else
+            python -m lunch_bot.main
+          fi
+      - name: Save suggestion history
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          git config user.name "lunch-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          [ -f data/history.json ] || exit 0
+          git add data/history.json
+          git diff --cached --quiet || git commit -m "chore: 🔧 record lunch suggestions $(TZ=Asia/Taipei date +%F)"
+          git push
