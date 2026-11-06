@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from .config import CANDIDATE_COUNT, FORTUNE_PICK_COUNT, FORTUNE_WEIGHT, MAX_PRICE_BAND
-from .market import MarketQuote, market_factor
+from .market import StockQuote, market_factor
 from .travel import Travel, estimate_travel
 
 WEEKDAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -71,9 +71,7 @@ def _matches_fortune(candidate: Candidate, favored: set[str]) -> bool:
     return bool(favored & set(candidate.shop["category"]))
 
 
-def _weight(
-    candidate: Candidate, favored: set[str], quote: MarketQuote | None
-) -> float:
+def _weight(candidate: Candidate, favored: set[str], quote: StockQuote | None) -> float:
     fortune = FORTUNE_WEIGHT if _matches_fortune(candidate, favored) else 1.0
     return fortune * market_factor(candidate.shop, quote)
 
@@ -82,7 +80,7 @@ def pick_suggestions(
     candidates: list[Candidate],
     favored: set[str],
     rng: random.Random,
-    quote: MarketQuote | None = None,
+    quote: StockQuote | None = None,
 ) -> list[Candidate]:
     """First pick always matches the fortune (when any shop does), so the card
     never recommends ramen and then lists none; the first two are also

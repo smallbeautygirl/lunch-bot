@@ -9,17 +9,14 @@ from urllib.parse import quote
 
 from .config import LUNCH_MAP_BASE_URL
 from .content import DailyContent
-from .market import MOOD_LABELS, MarketQuote
+from .market import MOOD_LABELS, StockQuote
 from .picker import Candidate
+from .teams import open_url_action, text_block, wrap_card
 from .travel import TravelMode
 
 WEEKDAY_NAMES = "一二三四五六日"
 RATING_IN_NOTE = re.compile(r"Google ([\d.]+)★")
 TRAVEL_LABELS = {TravelMode.WALK: "🚶 走路", TravelMode.DRIVE: "🚗 開車"}
-
-
-def _text(text: str, **style: object) -> dict:
-    return {"type": "TextBlock", "text": text, "wrap": True, **style}
 
 
 def _rating(shop: dict) -> str | None:
@@ -42,15 +39,15 @@ def _candidate_blocks(index: int, candidate: Candidate) -> list[dict]:
         facts.append(f"⭐ {rating}")
     facts.append(f"{TRAVEL_LABELS[travel.mode]} {travel.minutes} 分")
     return [
-        _text(
+        text_block(
             f"**{index}. {shop['name']}**　[地圖]({_map_url(shop)})", spacing="Medium"
         ),
-        _text(" · ".join(facts), isSubtle=True, spacing="None"),
+        text_block(" · ".join(facts), isSubtle=True, spacing="None"),
     ]
 
 
 def _segment(label: str, lines: list[str]) -> dict:
-    return _text("\n\n".join([f"**今日小單元：{label}**", *lines]), separator=True)
+    return text_block("\n\n".join([f"**今日小單元：{label}**", *lines]), separator=True)
 
 
 def _extra_blocks(content: DailyContent) -> list[dict]:
@@ -73,33 +70,15 @@ def _extra_blocks(content: DailyContent) -> list[dict]:
     return blocks
 
 
-def _wrap(body: list[dict], entities: list[dict] | None = None) -> dict:
-    card = {
-        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-        "type": "AdaptiveCard",
-        "version": "1.4",
-        "body": body,
-        "actions": [
-            {
-                "type": "Action.OpenUrl",
-                "title": "打開午餐地圖",
-                "url": LUNCH_MAP_BASE_URL,
-            }
-        ],
-        "msteams": {"width": "Full", "entities": entities or []},
-    }
-    return {
-        "type": "message",
-        "attachments": [
-            {"contentType": "application/vnd.microsoft.card.adaptive", "content": card}
-        ],
-    }
+def _lunch_card(body: list[dict], entities: list[dict] | None = None) -> dict:
+    actions = [open_url_action("打開午餐地圖", LUNCH_MAP_BASE_URL)]
+    return wrap_card(body, actions=actions, entities=entities)
 
 
 def _chief_blocks(chief: tuple[str, str] | None) -> tuple[list[dict], list[dict]]:
     closing = "今天不在的話，第一個回覆的人決定 🙋"
     if chief is None:
-        return [_text(f"午餐長請拍板！{closing}", separator=True)], []
+        return [text_block(f"午餐長請拍板！{closing}", separator=True)], []
     email, name = chief
     mention = f"<at>{name}</at>"
     entity = {
@@ -107,15 +86,13 @@ def _chief_blocks(chief: tuple[str, str] | None) -> tuple[list[dict], list[dict]
         "text": mention,
         "mentioned": {"id": email, "name": name},
     }
-    return [_text(f"{mention} 午餐長請拍板！{closing}", separator=True)], [entity]
+    return [text_block(f"{mention} 午餐長請拍板！{closing}", separator=True)], [entity]
 
 
-def market_line(quote: MarketQuote) -> str:
+def market_line(quote: StockQuote) -> str:
     arrow = "📈" if quote.pct >= 0 else "📉"
-    close_date = date.fromisoformat(quote.close_date) if quote.close_date else None
-    when = f"（{close_date.month}/{close_date.day} 收盤）" if close_date else ""
     return (
-        f"{arrow} **{quote.index_name} {quote.pct:+.2f}%**{when}"
+        f"{arrow} **{quote.name} {quote.pct:+.2f}%**（{quote.as_of}）"
         f" → 今天{MOOD_LABELS[quote.mood]}"
     )
 
@@ -128,34 +105,34 @@ def build_workday_card(
     picks: list[Candidate],
     chief: tuple[str, str] | None,
     cached_on: str | None,
-    quote: MarketQuote | None = None,
+    quote: StockQuote | None = None,
+    sign_members: list[str] | None = None,
 ) -> dict:
     title = f"🍱 午餐吃什麼？ {day.month}/{day.day}（{WEEKDAY_NAMES[day.weekday()]}）"
-    body = [_text(title, size="Large", weight="Bolder")]
+    body = [text_block(title, size="Large", weight="Bolder")]
     if content.fortune:
-        body.append(_text(f"🔮 **今日幸運星座：{sign}**\n\n{content.fortune}"))
+        who = f"（{'、'.join(sign_members)}）" if sign_members else ""
+        body.append(
+            text_block(f"🔮 **今日幸運星座：{sign}**{who}\n\n{content.fortune}")
+        )
     if quote:
-        body.append(_text(market_line(quote)))
+        body.append(text_block(market_line(quote)))
     for index, candidate in enumerate(picks, start=1):
         body += _candidate_blocks(index, candidate)
     if not picks:
-        body.append(_text("今天找不到符合條件的店，請午餐長自由發揮 🙏"))
+        body.append(text_block("今天找不到符合條件的店，請午餐長自由發揮 🙏"))
     if cached_on:
         body.append(
-            _text(f"⚠️ 午餐地圖暫時連不上，店家資料是 {cached_on} 的快取", isSubtle=True)
+            text_block(
+                f"⚠️ 午餐地圖暫時連不上，店家資料是 {cached_on} 的快取", isSubtle=True
+            )
         )
     chief_body, entities = _chief_blocks(chief)
-    return _wrap(body + chief_body + _extra_blocks(content), entities)
-
-
-def mark_as_test(payload: dict) -> dict:
-    """Prefix the card title so manual runs are never mistaken for the real
-    11:00 post."""
-    body = payload["attachments"][0]["content"]["body"]
-    body[0] = {**body[0], "text": f"[測試中] {body[0]['text']}"}
-    return payload
+    return _lunch_card(body + chief_body + _extra_blocks(content), entities)
 
 
 def build_holiday_card(*, day: date, content: DailyContent) -> dict:
     title = f"🎉 {day.month}/{day.day} 放假快樂！"
-    return _wrap([_text(title, size="Large", weight="Bolder"), *_extra_blocks(content)])
+    return _lunch_card(
+        [text_block(title, size="Large", weight="Bolder"), *_extra_blocks(content)]
+    )

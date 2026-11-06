@@ -1,33 +1,14 @@
 from __future__ import annotations
 
-import logging
-import os
 import random
 from datetime import date
 from enum import StrEnum
 
-import anthropic
 from pydantic import BaseModel
 
 from .calendar_tw import DayKind
-from .config import CLAUDE_MODEL
+from .claude import ask_claude
 
-logger = logging.getLogger(__name__)
-
-ZODIAC_SIGNS = (
-    "牡羊座",
-    "金牛座",
-    "雙子座",
-    "巨蟹座",
-    "獅子座",
-    "處女座",
-    "天秤座",
-    "天蠍座",
-    "射手座",
-    "摩羯座",
-    "水瓶座",
-    "雙魚座",
-)
 # Rotating topics keep Haiku from telling the same joke every day.
 TOPICS = (
     "動物",
@@ -41,7 +22,6 @@ TOPICS = (
     "太空",
     "語言",
 )
-MAX_OUTPUT_TOKENS = 4000
 
 
 class ExtraKind(StrEnum):
@@ -127,10 +107,6 @@ def generate_content(
     """Never blocks the lunch post: on any API failure it returns empty
     content and the message goes out without the fun parts."""
     topic = rng.choice(TOPICS)
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        # The SDK raises TypeError (not APIError) when it has no credentials.
-        logger.warning("ANTHROPIC_API_KEY not set, skipping generated content")
-        return DailyContent()
     prompt = _build_prompt(
         day=day,
         sign=sign,
@@ -138,21 +114,9 @@ def generate_content(
         extras=extras,
         topic=topic,
     )
-    try:
-        response = anthropic.Anthropic().messages.parse(
-            model=CLAUDE_MODEL,
-            max_tokens=MAX_OUTPUT_TOKENS,
-            output_config={"effort": "medium"},
-            messages=[{"role": "user", "content": prompt}],
-            output_format=DailyContent,
-        )
-    except anthropic.APIError as error:
-        logger.warning("Claude content failed", extra={"error": str(error)})
+    content = ask_claude(prompt, DailyContent)
+    if content is None:
         return DailyContent()
-    if response.stop_reason != "end_turn" or response.parsed_output is None:
-        logger.warning("Claude content unusable", extra={"stop": response.stop_reason})
-        return DailyContent()
-    content = response.parsed_output
     content.favored_categories = [
         c for c in content.favored_categories if c in categories
     ]

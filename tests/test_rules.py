@@ -4,16 +4,12 @@ import random
 from datetime import date
 
 from lunch_bot.calendar_tw import DayKind, classify_day
-from lunch_bot.card import (
-    build_holiday_card,
-    build_workday_card,
-    mark_as_test,
-    market_line,
-)
+from lunch_bot.card import build_holiday_card, build_workday_card, market_line
 from lunch_bot.content import DailyContent, ExtraKind, Joke, extras_for
 from lunch_bot.history import recent_shop_ids
-from lunch_bot.market import MarketQuote, Mood, market_factor
+from lunch_bot.market import Mood, StockQuote, market_factor
 from lunch_bot.picker import Candidate, find_candidates, is_open_at, pick_suggestions
+from lunch_bot.teams import mark_as_test
 from lunch_bot.travel import Travel, TravelMode, estimate_travel
 
 FRIDAY = date(2026, 11, 6)
@@ -34,6 +30,10 @@ LUNCH_HOURS = {
     key: [["11:00", "14:00"]]
     for key in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 }
+
+
+def taiex(pct: float, as_of: str = "11/5 收盤") -> StockQuote:
+    return StockQuote("加權指數", 100 + pct, 100, as_of)
 
 
 def make_shop(shop_id: str, category: str, **overrides: object) -> dict:
@@ -186,13 +186,13 @@ def test_test_runs_are_marked_in_the_title():
 
 
 def test_market_mood_follows_the_site_thresholds():
-    assert MarketQuote("加權指數", "2026-11-05", 0.3).mood is Mood.UP
-    assert MarketQuote("加權指數", "2026-11-05", -4.07).mood is Mood.DOWN
-    assert MarketQuote("加權指數", "2026-11-05", 0.29).mood is Mood.FLAT
+    assert taiex(0.3).mood is Mood.UP
+    assert taiex(-4.07).mood is Mood.DOWN
+    assert taiex(0.29).mood is Mood.FLAT
 
 
 def test_market_drop_favours_cheap_shops_and_penalises_fancy_ones():
-    drop = MarketQuote("加權指數", "2026-11-05", -4.07)
+    drop = taiex(-4.07)
     assert market_factor(make_shop("bento", "便當", price=1), drop) == 2.2
     assert market_factor(make_shop("steak", "牛排", price=3), drop) == 0.4
     assert market_factor(make_shop("hotpot", "火鍋", price=None), drop) == 0.4
@@ -202,9 +202,23 @@ def test_missing_quote_leaves_weights_untouched():
     assert market_factor(make_shop("steak", "牛排", price=3), None) == 1.0
 
 
-def test_market_line_shows_change_close_date_and_mood():
-    line = market_line(MarketQuote("加權指數", "2026-11-05", -4.072))
-    assert "-4.07%" in line and "11/5 收盤" in line and "省一點" in line
+def test_market_line_shows_change_timestamp_and_mood():
+    line = market_line(taiex(-4.072, "截至 11:05"))
+    assert "-4.07%" in line and "截至 11:05" in line and "省一點" in line
+
+
+def test_lucky_sign_lists_the_members_born_under_it():
+    card = build_workday_card(
+        day=FRIDAY,
+        sign="牡羊座",
+        content=DailyContent(fortune="衝就對了"),
+        picks=[],
+        chief=None,
+        cached_on=None,
+        sign_members=["amy", "bob"],
+    )
+    texts = [b["text"] for b in card["attachments"][0]["content"]["body"]]
+    assert any("今日幸運星座：牡羊座**（amy、bob）" in t for t in texts)
 
 
 def test_market_drop_tilts_weighted_pick_towards_cheap_shops():
@@ -216,7 +230,7 @@ def test_market_drop_tilts_weighted_pick_towards_cheap_shops():
         Candidate(make_shop(f"f{i}", f"牛排{i}", price=3), Travel(TravelMode.WALK, 5))
         for i in range(5)
     ]
-    drop = MarketQuote("加權指數", "2026-11-05", -4.07)
+    drop = taiex(-4.07)
     first_picks = [
         pick_suggestions(cheap + fancy, set(), random.Random(seed), drop)[0]
         for seed in range(200)

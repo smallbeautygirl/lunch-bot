@@ -10,6 +10,7 @@ MOOD_THRESHOLD_PCT = 0.3
 FANCY_PRICE_BAND = 3
 FANCY_CATEGORIES = {"牛排", "海鮮", "火鍋"}
 CHEAP_CATEGORIES = {"便當", "自助餐", "麵", "水餃", "小吃", "速食", "早餐"}
+PCT_DECIMALS = 2
 
 
 class Mood(StrEnum):
@@ -32,28 +33,26 @@ MOOD_FACTORS = {
 
 
 @dataclass(frozen=True)
-class MarketQuote:
-    index_name: str
-    close_date: str
-    pct: float
+class StockQuote:
+    name: str
+    price: float
+    previous_close: float
+    # "截至 09:14" while the market trades, "11/5 收盤" otherwise.
+    as_of: str
+
+    @property
+    def pct(self) -> float:
+        return (self.price / self.previous_close - 1) * 100
 
     @property
     def mood(self) -> Mood:
-        if self.pct >= MOOD_THRESHOLD_PCT:
+        # Rounded as displayed, so a card saying +0.30% never reads 平盤.
+        pct = round(self.pct, PCT_DECIMALS)
+        if pct >= MOOD_THRESHOLD_PCT:
             return Mood.UP
-        if self.pct <= -MOOD_THRESHOLD_PCT:
+        if pct <= -MOOD_THRESHOLD_PCT:
             return Mood.DOWN
         return Mood.FLAT
-
-
-def parse_quote(raw: dict | None) -> MarketQuote | None:
-    if not raw or raw.get("pct") is None:
-        return None
-    return MarketQuote(
-        index_name=raw.get("index", "加權指數"),
-        close_date=raw.get("date", ""),
-        pct=float(raw["pct"]),
-    )
 
 
 def price_tier(shop: dict) -> PriceTier | None:
@@ -67,7 +66,7 @@ def price_tier(shop: dict) -> PriceTier | None:
     return None
 
 
-def market_factor(shop: dict, quote: MarketQuote | None) -> float:
+def market_factor(shop: dict, quote: StockQuote | None) -> float:
     tier = price_tier(shop)
     if quote is None or tier is None:
         return 1.0

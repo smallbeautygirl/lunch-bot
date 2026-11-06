@@ -1,8 +1,20 @@
 # lunch-bot 🍱
 
-每個上班日 11:00，在 Teams 群組「午餐好夥伴」推 3 家午餐候選，由午餐長拍板。
+在 Teams 群組「午餐好夥伴」每個上班日發兩則訊息：
 
-## 它會做什麼
+- **09:00 早安卡**：股市快照＋群組成員星座的今日運勢
+- **11:00 午餐卡**：3 家午餐候選，由午餐長拍板
+
+## 09:00 早安卡
+
+只在上班日（含補班）發，國定假日和週末不發（休市日只會重複上個交易日的數字）。
+
+- **台股**：加權指數，抓 Yahoo Finance 當下的數字並標時間。開盤中寫「截至 09:14」，還沒開盤就寫「11/5 收盤」。卡片是發送當下的快照，不會自己更新；想看最新的盤點「看即時盤」。
+- **隔夜美股**：S&P 500、那斯達克、費城半導體、台積電 ADR 的前一晚收盤。
+- **星座運勢**（Claude 產生，僅供娛樂）：只列群組裡有人的星座，每個星座附上成員名字、一兩句運勢、財運 ★1–5、幸運色，最後標出今日財運最旺的星座。不 tag 任何人。
+- 股市或 Claude 失敗時，該段改顯示「暫時抓不到」，其餘照發。
+
+## 11:00 午餐卡
 
 | 哪天 | 發什麼 |
 |---|---|
@@ -12,7 +24,8 @@
 
 - **店家**來自 [Linker Vision Lunch Map](https://lunch-map.betoolman.com/) 的 `/api/shops`。只挑 11:40 有營業、開車 15 分鐘內、價位 500 元以下（價位不明也算）、可內用或外帶、最近 5 個推薦日沒出現過的店。營業時間不明的店不推。
 - **走路還是開車**：用網站本身 `/api/config` 的門檻和停車場資料來算，結果和網站一致。
-- **星座**：每天隨機一個。Claude 寫運勢，並挑出「今天適合」的店家分類。3 家裡有 2 家依運勢加權，1 家完全隨機。
+- **星座**：每天從群組成員的星座裡隨機抽一個，並列出是誰的星座（沒設定成員名單時從 12 星座抽）。Claude 寫運勢，並挑出「今天適合」的店家分類。3 家裡有 2 家依運勢加權，1 家完全隨機。
+- **股市**：加權指數漲 ≥0.3% 加菜（貴的店機率變高）、跌 ≥0.3% 省一點（便宜的店機率變高），門檻和倍率照午餐地圖網站。數字抓自 Yahoo Finance，盤中標「截至 11:05」。
 - **附加內容**（Claude 產生）：一和五是笑話，二和四是英文，三是冷知識。
 - 同一天重跑，挑出的店相同（以日期當亂數種子）。
 - 午餐地圖連不上時，改用上一次成功抓到的資料（存在 Actions cache，不進 repo）。
@@ -25,10 +38,11 @@
    - `TEAMS_WEBHOOK_URL`：上一步的 URL
    - `ANTHROPIC_API_KEY`：專用、有消費上限的 key
    - `LUNCH_CHIEF_EMAIL`：午餐長的 Teams 帳號 email（放 secret，不寫進公開 repo）
+   - `GROUP_MEMBERS`：星座 → 成員名字的 JSON，例如 `{"牡羊": ["amy", "bob"], "水瓶座": ["carol"]}`（星座寫不寫「座」都可以）。放 secret 是因為 repo 公開；Actions log 也公開，所以程式會把每個名字遮蔽（`::add-mask::`），dry run 印出的卡片看不到名字。
 3. **GitHub Variables**（選填）：`LUNCH_CHIEF_NAME`，卡片上 tag 顯示的名字，預設「午餐長」。
-4. 到 Actions → Lunch bot → Run workflow，勾著 `dry_run` 跑一次，在 log 裡看卡片內容。取消勾選再跑一次，就會真的發到群組。
+4. 到 Actions → Lunch bot（或 Morning horoscope）→ Run workflow，勾著 `dry_run` 跑一次，在 log 裡看卡片內容。取消勾選再跑一次，就會真的發到群組。
 
-排程是 `0 3 * * *`（台北 11:00）。GitHub 的排程常會延遲幾分鐘到十幾分鐘。
+排程是 `0 1 * * *`（台北 09:00）和 `0 3 * * *`（台北 11:00）。GitHub 的排程常會延遲幾分鐘到十幾分鐘。
 
 ## 本機開發
 
@@ -36,6 +50,7 @@
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/pytest
 .venv/bin/python -m lunch_bot.main --dry-run --date 2026-11-09
+.venv/bin/python -m lunch_bot.morning --dry-run --date 2026-11-09
 ```
 
 台灣假日資料來自 [ruyut/TaiwanCalendar](https://github.com/ruyut/TaiwanCalendar)（政府行政機關辦公日曆）。

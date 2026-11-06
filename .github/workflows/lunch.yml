@@ -44,6 +44,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           LUNCH_CHIEF_EMAIL: ${{ secrets.LUNCH_CHIEF_EMAIL }}
           LUNCH_CHIEF_NAME: ${{ vars.LUNCH_CHIEF_NAME }}
+          GROUP_MEMBERS: ${{ secrets.GROUP_MEMBERS }}
         run: |
           # Only the 11:00 schedule is the real post; a manual run that posts
           # is marked [測試中] and leaves the suggestion history untouched.
