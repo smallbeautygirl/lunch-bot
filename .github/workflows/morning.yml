@@ -2,9 +2,10 @@ name: Morning horoscope
 
 on:
   schedule:
-    # 01:00 UTC = 09:00 Asia/Taipei. GitHub may start scheduled runs late.
+    # 00:50 UTC = 08:50 Asia/Taipei, off the top of the hour: GitHub delays
+    # and sometimes drops runs scheduled on the hour, so this aims to land ~09:00.
     # Runs every day: the script itself posts on workdays (incl. 補班) only.
-    - cron: "0 1 * * *"
+    - cron: "50 0 * * *"
   workflow_dispatch:
     inputs:
       dry_run:

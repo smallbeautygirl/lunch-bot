@@ -2,9 +2,11 @@ name: Lunch bot
 
 on:
   schedule:
-    # 03:00 UTC = 11:00 Asia/Taipei. GitHub may start scheduled runs late.
+    # 02:50 UTC = 10:50 Asia/Taipei, off the top of the hour: GitHub delays
+    # and sometimes drops runs scheduled on the hour (the 2026-11-06 11:00
+    # run never fired), so this aims to land ~11:00.
     # Runs every day: the script itself skips weekends and handles 補班.
-    - cron: "0 3 * * *"
+    - cron: "50 2 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
