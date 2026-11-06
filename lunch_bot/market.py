@@ -39,6 +39,11 @@ class StockQuote:
     previous_close: float
     # "截至 09:14" while the market trades, "11/5 收盤" otherwise.
     as_of: str
+    page_url: str | None = None
+
+    @property
+    def linked_name(self) -> str:
+        return f"[{self.name}]({self.page_url})" if self.page_url else self.name
 
     @property
     def pct(self) -> float:

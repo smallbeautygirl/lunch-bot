@@ -14,9 +14,8 @@ DISCLAIMER = "運勢由 AI 產生，僅供娛樂；股市資訊非投資建議�
 
 def stock_line(quote: StockQuote) -> str:
     arrow = "📈" if quote.pct >= 0 else "📉"
-    return (
-        f"{arrow} **{quote.name}** {quote.price:,.2f}（{quote.pct:+.2f}%）{quote.as_of}"
-    )
+    change = f"{quote.price:,.2f}（{quote.pct:+.2f}%）"
+    return f"{arrow} **{quote.linked_name}** {change}{quote.as_of}"
 
 
 def _market_blocks(taiex: StockQuote | None, overseas: list[StockQuote]) -> list[dict]:

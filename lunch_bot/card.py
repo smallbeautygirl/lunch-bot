@@ -92,7 +92,7 @@ def _chief_blocks(chief: tuple[str, str] | None) -> tuple[list[dict], list[dict]
 def market_line(quote: StockQuote) -> str:
     arrow = "📈" if quote.pct >= 0 else "📉"
     return (
-        f"{arrow} **{quote.name} {quote.pct:+.2f}%**（{quote.as_of}）"
+        f"{arrow} **{quote.linked_name} {quote.pct:+.2f}%**（{quote.as_of}）"
         f" → 今天{MOOD_LABELS[quote.mood]}"
     )
 

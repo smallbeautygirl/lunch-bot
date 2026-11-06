@@ -5,7 +5,7 @@ from datetime import date
 from lunch_bot.horoscope import SignFortune, luckiest_signs, tidy_fortunes
 from lunch_bot.market import StockQuote
 from lunch_bot.morning_card import build_morning_card, stock_line
-from lunch_bot.stocks import parse_chart
+from lunch_bot.stocks import parse_chart, quote_page_url
 from lunch_bot.zodiac import parse_members
 
 MONDAY = date(2026, 11, 9)
@@ -14,13 +14,25 @@ TAIPEI_OFFSET = 28800
 OPEN, CLOSE = 1793926800, 1793943000
 
 
-def chart_meta(traded_at: int) -> dict:
+DAY = 86400
+# Daily bars stamped at the 09:00 open, 11/2 → 11/6; Yahoo leaves today's
+# close empty until it settles.
+BAR_OPENS = [OPEN - offset * DAY for offset in (4, 3, 2, 1, 0)]
+BAR_CLOSES = [44920.14, 43307.54, 42948.91, 41574.72, None]
+
+
+def chart(traded_at: int, price: float = 39701.64) -> dict:
     return {
-        "regularMarketPrice": 39701.64,
-        "chartPreviousClose": 42948.9,
-        "regularMarketTime": traded_at,
-        "gmtoffset": TAIPEI_OFFSET,
-        "currentTradingPeriod": {"regular": {"start": OPEN, "end": CLOSE}},
+        "meta": {
+            "regularMarketPrice": price,
+            # Stale on purpose: Yahoo has served 11/4's close beside 11/6's price.
+            "chartPreviousClose": 42948.9,
+            "regularMarketTime": traded_at,
+            "gmtoffset": TAIPEI_OFFSET,
+            "currentTradingPeriod": {"regular": {"start": OPEN, "end": CLOSE}},
+        },
+        "timestamp": BAR_OPENS,
+        "indicators": {"quote": [{"close": BAR_CLOSES}]},
     }
 
 
@@ -35,22 +47,34 @@ def card_texts(card: dict) -> list[str]:
 
 
 def test_quote_during_trading_is_stamped_with_its_time():
-    quote = parse_chart(chart_meta(OPEN + 14 * 60), "加權指數")
-    assert quote.as_of == "截至 09:14"
-    assert round(quote.pct, 2) == -7.56
+    assert parse_chart(chart(OPEN + 14 * 60), "加權指數").as_of == "截至 09:14"
 
 
-def test_quote_before_the_open_is_labelled_as_previous_close():
-    yesterday_close = OPEN - 20 * 3600
-    assert parse_chart(chart_meta(yesterday_close), "加權指數").as_of == "11/5 收盤"
+def test_change_is_against_the_last_close_before_the_quotes_day():
+    quote = parse_chart(chart(OPEN + 14 * 60), "加權指數")
+    assert quote.previous_close == 41574.72
+    assert round(quote.pct, 2) == -4.51
+
+
+def test_stale_quote_from_yesterday_compares_with_the_day_before():
+    yesterday_close = CLOSE - DAY
+    quote = parse_chart(chart(yesterday_close, price=41574.72), "加權指數")
+    assert quote.as_of == "11/5 收盤"
+    assert round(quote.pct, 2) == -3.20
 
 
 def test_quote_after_the_close_is_labelled_as_todays_close():
-    assert parse_chart(chart_meta(CLOSE + 195), "加權指數").as_of == "11/6 收盤"
+    assert parse_chart(chart(CLOSE + 195), "加權指數").as_of == "11/6 收盤"
 
 
 def test_chart_without_a_price_yields_no_quote():
-    assert parse_chart({"chartPreviousClose": 1.0}, "加權指數") is None
+    assert parse_chart({"meta": {}}, "加權指數") is None
+
+
+def test_chart_without_an_earlier_close_yields_no_quote():
+    bare = chart(OPEN + 60)
+    bare["timestamp"], bare["indicators"] = [OPEN], {"quote": [{"close": [1.0]}]}
+    assert parse_chart(bare, "加權指數") is None
 
 
 def test_members_accept_short_sign_names_and_follow_zodiac_order():
@@ -107,3 +131,10 @@ def test_morning_card_still_posts_when_market_and_horoscope_fail():
     )
     texts = "\n".join(card_texts(card))
     assert "股市資料暫時抓不到" in texts and "運勢暫時算不出來" in texts
+
+
+def test_stock_name_links_to_its_quote_page():
+    url = quote_page_url("^TWII")
+    assert url == "https://tw.stock.yahoo.com/quote/%5ETWII"
+    line = stock_line(StockQuote("加權指數", 101, 100, "截至 09:05", url))
+    assert f"**[加權指數]({url})**" in line
