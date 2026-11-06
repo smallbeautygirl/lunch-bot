@@ -61,6 +61,11 @@ WEEKDAY_EXTRAS = (
 )
 
 
+class Joke(BaseModel):
+    question: str
+    answer: str
+
+
 class EnglishLesson(BaseModel):
     sentence: str
     translation: str
@@ -71,7 +76,7 @@ class EnglishLesson(BaseModel):
 class DailyContent(BaseModel):
     fortune: str | None = None
     favored_categories: list[str] = []
-    joke: str | None = None
+    joke: Joke | None = None
     english: EnglishLesson | None = None
     trivia: str | None = None
 
@@ -100,7 +105,8 @@ def _build_prompt(
             "不要提其他食物，也不要寫「其他」這個分類。"
         )
     wanted = {
-        ExtraKind.JOKE: f"joke：一則和「{topic}」有關、適合辦公室的短笑話。",
+        ExtraKind.JOKE: f"joke：一則和「{topic}」有關的一問一答冷笑話或諧音梗，"
+        "question 是問題、answer 是答案；不需要背景知識，台灣上班族一看就懂。",
         ExtraKind.ENGLISH: f"english：一句和「{topic}」有關的實用英文、中文翻譯、"
         "一個重點單字和它的意思。",
         ExtraKind.TRIVIA: f"trivia：一則和「{topic}」有關、可查證的冷知識，一兩句。",
@@ -136,7 +142,7 @@ def generate_content(
         response = anthropic.Anthropic().messages.parse(
             model=CLAUDE_MODEL,
             max_tokens=MAX_OUTPUT_TOKENS,
-            output_config={"effort": "low"},
+            output_config={"effort": "medium"},
             messages=[{"role": "user", "content": prompt}],
             output_format=DailyContent,
         )

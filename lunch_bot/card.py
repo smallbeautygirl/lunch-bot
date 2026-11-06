@@ -48,20 +48,27 @@ def _candidate_blocks(index: int, candidate: Candidate) -> list[dict]:
     ]
 
 
+def _segment(label: str, lines: list[str]) -> dict:
+    return _text("\n\n".join([f"**今日小單元：{label}**", *lines]), separator=True)
+
+
 def _extra_blocks(content: DailyContent) -> list[dict]:
     blocks = []
-    if content.joke:
-        blocks.append(_text(f"😂 **今日笑話**\n\n{content.joke}", separator=True))
+    if joke := content.joke:
+        blocks.append(_segment("😂 笑話", [f"Q：{joke.question}", f"A：{joke.answer}"]))
     if lesson := content.english:
         blocks.append(
-            _text(
-                f"📖 **每日一句英文**\n\n{lesson.sentence}\n\n{lesson.translation}\n\n"
-                f"🔑 **{lesson.keyword}**：{lesson.keyword_meaning}",
-                separator=True,
+            _segment(
+                "📖 每日一句英文",
+                [
+                    lesson.sentence,
+                    lesson.translation,
+                    f"🔑 **{lesson.keyword}**：{lesson.keyword_meaning}",
+                ],
             )
         )
     if content.trivia:
-        blocks.append(_text(f"💡 **冷知識**\n\n{content.trivia}", separator=True))
+        blocks.append(_segment("💡 冷知識", [content.trivia]))
     return blocks
 
 
@@ -125,6 +132,14 @@ def build_workday_card(
         )
     chief_body, entities = _chief_blocks(chief)
     return _wrap(body + chief_body + _extra_blocks(content), entities)
+
+
+def mark_as_test(payload: dict) -> dict:
+    """Prefix the card title so manual runs are never mistaken for the real
+    11:00 post."""
+    body = payload["attachments"][0]["content"]["body"]
+    body[0] = {**body[0], "text": f"[測試中] {body[0]['text']}"}
+    return payload
 
 
 def build_holiday_card(*, day: date, content: DailyContent) -> dict:

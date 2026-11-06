@@ -4,8 +4,8 @@ import random
 from datetime import date
 
 from lunch_bot.calendar_tw import DayKind, classify_day
-from lunch_bot.card import build_workday_card
-from lunch_bot.content import DailyContent, ExtraKind, extras_for
+from lunch_bot.card import build_holiday_card, build_workday_card, mark_as_test
+from lunch_bot.content import DailyContent, ExtraKind, Joke, extras_for
 from lunch_bot.history import recent_shop_ids
 from lunch_bot.picker import Candidate, find_candidates, is_open_at, pick_suggestions
 from lunch_bot.travel import Travel, TravelMode, estimate_travel
@@ -155,3 +155,25 @@ def test_suggestions_still_filled_when_no_shop_matches_the_fortune():
         for cat in ("麵", "飯", "日式")
     ]
     assert len(pick_suggestions(candidates, {"拉麵"}, random.Random(1))) == 3
+
+
+def test_joke_is_labelled_and_split_into_question_and_answer():
+    content = DailyContent(joke=Joke(question="什麼動物最愛睡?", answer="無尾熊"))
+    card = build_workday_card(
+        day=FRIDAY,
+        sign="獅子座",
+        content=content,
+        picks=[],
+        chief=None,
+        cached_on=None,
+    )
+    texts = [b["text"] for b in card["attachments"][0]["content"]["body"]]
+    assert any(
+        "今日小單元：😂 笑話" in t and "Q：" in t and "A：無尾熊" in t for t in texts
+    )
+
+
+def test_test_runs_are_marked_in_the_title():
+    card = build_holiday_card(day=FRIDAY, content=DailyContent())
+    title = mark_as_test(card)["attachments"][0]["content"]["body"][0]["text"]
+    assert title.startswith("[測試中]")

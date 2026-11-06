@@ -17,7 +17,7 @@ from datetime import date, datetime
 import requests
 
 from .calendar_tw import DayKind, classify_day, fetch_holiday_flags
-from .card import build_holiday_card, build_workday_card
+from .card import build_holiday_card, build_workday_card, mark_as_test
 from .config import (
     HISTORY_PATH,
     HTTP_TIMEOUT_SECONDS,
@@ -88,6 +88,11 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Lunch suggestion bot")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--date", type=date.fromisoformat)
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Post with a [測試中] title and leave the suggestion history alone",
+    )
     return parser.parse_args()
 
 
@@ -105,11 +110,13 @@ def run() -> None:
         payload, shop_ids = build_workday_payload(day, rng)
     else:
         payload = build_holiday_payload(day, rng)
+    if args.test:
+        payload = mark_as_test(payload)
     if args.dry_run:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return
     send_to_teams(payload)
-    if shop_ids:
+    if shop_ids and not args.test:
         save_suggestion(HISTORY_PATH, day, shop_ids)
 
 
