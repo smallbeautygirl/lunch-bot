@@ -8,6 +8,7 @@ from datetime import date
 import requests
 
 from .config import HTTP_TIMEOUT_SECONDS, LUNCH_MAP_BASE_URL, SHOPS_CACHE_PATH
+from .market import MarketQuote, parse_quote
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,16 @@ def load_lunch_map(today: date) -> LunchMapData:
         return _read_cache()
     _save_cache(data, today)
     return data
+
+
+def fetch_market_quote() -> MarketQuote | None:
+    """Previous close of TAIEX as the site reports it. Never cached: a stale
+    quote would steer lunch by an old day's market."""
+    try:
+        return parse_quote(_fetch_json("/api/market"))
+    except (requests.RequestException, ValueError) as error:
+        logger.warning("Market quote unavailable", extra={"error": str(error)})
+        return None
 
 
 def _save_cache(data: LunchMapData, today: date) -> None:

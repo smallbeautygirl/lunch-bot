@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from .config import CANDIDATE_COUNT, FORTUNE_PICK_COUNT, FORTUNE_WEIGHT, MAX_PRICE_BAND
+from .market import MarketQuote, market_factor
 from .travel import Travel, estimate_travel
 
 WEEKDAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -66,25 +67,35 @@ def find_candidates(
     return candidates
 
 
-def _weight(candidate: Candidate, favored: set[str]) -> float:
-    return FORTUNE_WEIGHT if favored & set(candidate.shop["category"]) else 1.0
+def _matches_fortune(candidate: Candidate, favored: set[str]) -> bool:
+    return bool(favored & set(candidate.shop["category"]))
+
+
+def _weight(
+    candidate: Candidate, favored: set[str], quote: MarketQuote | None
+) -> float:
+    fortune = FORTUNE_WEIGHT if _matches_fortune(candidate, favored) else 1.0
+    return fortune * market_factor(candidate.shop, quote)
 
 
 def pick_suggestions(
-    candidates: list[Candidate], favored: set[str], rng: random.Random
+    candidates: list[Candidate],
+    favored: set[str],
+    rng: random.Random,
+    quote: MarketQuote | None = None,
 ) -> list[Candidate]:
     """First pick always matches the fortune (when any shop does), so the card
-    never recommends ramen and then lists none; then a fortune-weighted pick;
-    the last is fully random so the horoscope never decides the whole list."""
+    never recommends ramen and then lists none; the first two are also
+    weighted by the market mood; the last is fully random so neither the
+    horoscope nor the market decides the whole list."""
     pool = list(candidates)
     picks: list[Candidate] = []
     while pool and len(picks) < CANDIDATE_COUNT:
-        matching = [c for c in pool if _weight(c, favored) > 1.0]
-        if not picks and matching:
-            chosen = rng.choice(matching)
-        elif len(picks) < FORTUNE_PICK_COUNT:
-            weights = [_weight(c, favored) for c in pool]
-            chosen = rng.choices(pool, weights=weights)[0]
+        matching = [c for c in pool if _matches_fortune(c, favored)]
+        if len(picks) < FORTUNE_PICK_COUNT:
+            options = matching if not picks and matching else pool
+            weights = [_weight(c, favored, quote) for c in options]
+            chosen = rng.choices(options, weights=weights)[0]
         else:
             chosen = rng.choice(pool)
         picks.append(chosen)

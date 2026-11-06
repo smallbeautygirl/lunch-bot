@@ -9,6 +9,7 @@ from urllib.parse import quote
 
 from .config import LUNCH_MAP_BASE_URL
 from .content import DailyContent
+from .market import MOOD_LABELS, MarketQuote
 from .picker import Candidate
 from .travel import TravelMode
 
@@ -109,6 +110,16 @@ def _chief_blocks(chief: tuple[str, str] | None) -> tuple[list[dict], list[dict]
     return [_text(f"{mention} 午餐長請拍板！{closing}", separator=True)], [entity]
 
 
+def market_line(quote: MarketQuote) -> str:
+    arrow = "📈" if quote.pct >= 0 else "📉"
+    close_date = date.fromisoformat(quote.close_date) if quote.close_date else None
+    when = f"（{close_date.month}/{close_date.day} 收盤）" if close_date else ""
+    return (
+        f"{arrow} **{quote.index_name} {quote.pct:+.2f}%**{when}"
+        f" → 今天{MOOD_LABELS[quote.mood]}"
+    )
+
+
 def build_workday_card(
     *,
     day: date,
@@ -117,11 +128,14 @@ def build_workday_card(
     picks: list[Candidate],
     chief: tuple[str, str] | None,
     cached_on: str | None,
+    quote: MarketQuote | None = None,
 ) -> dict:
     title = f"🍱 午餐吃什麼？ {day.month}/{day.day}（{WEEKDAY_NAMES[day.weekday()]}）"
     body = [_text(title, size="Large", weight="Bolder")]
     if content.fortune:
         body.append(_text(f"🔮 **今日幸運星座：{sign}**\n\n{content.fortune}"))
+    if quote:
+        body.append(_text(market_line(quote)))
     for index, candidate in enumerate(picks, start=1):
         body += _candidate_blocks(index, candidate)
     if not picks:

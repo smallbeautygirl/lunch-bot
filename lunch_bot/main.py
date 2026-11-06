@@ -27,7 +27,7 @@ from .config import (
 )
 from .content import ZODIAC_SIGNS, extras_for, generate_content
 from .history import load_history, recent_shop_ids, save_suggestion
-from .lunch_map import load_lunch_map
+from .lunch_map import fetch_market_quote, load_lunch_map
 from .picker import find_candidates, pick_suggestions
 
 logger = logging.getLogger(__name__)
@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str]]:
     lunch_map = load_lunch_map(day)
+    quote = fetch_market_quote()
     excluded = recent_shop_ids(load_history(HISTORY_PATH), day)
     candidates = find_candidates(
         lunch_map.shops,
@@ -52,7 +53,7 @@ def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str
         extras=extras_for(day, DayKind.WORKDAY),
         rng=rng,
     )
-    picks = pick_suggestions(candidates, set(content.favored_categories), rng)
+    picks = pick_suggestions(candidates, set(content.favored_categories), rng, quote)
     card = build_workday_card(
         day=day,
         sign=sign,
@@ -60,6 +61,7 @@ def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str
         picks=picks,
         chief=read_lunch_chief(),
         cached_on=lunch_map.cached_on,
+        quote=quote,
     )
     return card, [pick.shop["id"] for pick in picks]
 

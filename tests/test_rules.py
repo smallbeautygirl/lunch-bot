@@ -4,9 +4,15 @@ import random
 from datetime import date
 
 from lunch_bot.calendar_tw import DayKind, classify_day
-from lunch_bot.card import build_holiday_card, build_workday_card, mark_as_test
+from lunch_bot.card import (
+    build_holiday_card,
+    build_workday_card,
+    mark_as_test,
+    market_line,
+)
 from lunch_bot.content import DailyContent, ExtraKind, Joke, extras_for
 from lunch_bot.history import recent_shop_ids
+from lunch_bot.market import MarketQuote, Mood, market_factor
 from lunch_bot.picker import Candidate, find_candidates, is_open_at, pick_suggestions
 from lunch_bot.travel import Travel, TravelMode, estimate_travel
 
@@ -177,3 +183,43 @@ def test_test_runs_are_marked_in_the_title():
     card = build_holiday_card(day=FRIDAY, content=DailyContent())
     title = mark_as_test(card)["attachments"][0]["content"]["body"][0]["text"]
     assert title.startswith("[測試中]")
+
+
+def test_market_mood_follows_the_site_thresholds():
+    assert MarketQuote("加權指數", "2026-11-05", 0.3).mood is Mood.UP
+    assert MarketQuote("加權指數", "2026-11-05", -4.07).mood is Mood.DOWN
+    assert MarketQuote("加權指數", "2026-11-05", 0.29).mood is Mood.FLAT
+
+
+def test_market_drop_favours_cheap_shops_and_penalises_fancy_ones():
+    drop = MarketQuote("加權指數", "2026-11-05", -4.07)
+    assert market_factor(make_shop("bento", "便當", price=1), drop) == 2.2
+    assert market_factor(make_shop("steak", "牛排", price=3), drop) == 0.4
+    assert market_factor(make_shop("hotpot", "火鍋", price=None), drop) == 0.4
+
+
+def test_missing_quote_leaves_weights_untouched():
+    assert market_factor(make_shop("steak", "牛排", price=3), None) == 1.0
+
+
+def test_market_line_shows_change_close_date_and_mood():
+    line = market_line(MarketQuote("加權指數", "2026-11-05", -4.072))
+    assert "-4.07%" in line and "11/5 收盤" in line and "省一點" in line
+
+
+def test_market_drop_tilts_weighted_pick_towards_cheap_shops():
+    cheap = [
+        Candidate(make_shop(f"c{i}", f"便當{i}", price=1), Travel(TravelMode.WALK, 5))
+        for i in range(5)
+    ]
+    fancy = [
+        Candidate(make_shop(f"f{i}", f"牛排{i}", price=3), Travel(TravelMode.WALK, 5))
+        for i in range(5)
+    ]
+    drop = MarketQuote("加權指數", "2026-11-05", -4.07)
+    first_picks = [
+        pick_suggestions(cheap + fancy, set(), random.Random(seed), drop)[0]
+        for seed in range(200)
+    ]
+    cheap_share = sum(p.shop["price"] == 1 for p in first_picks) / len(first_picks)
+    assert cheap_share > 0.75
