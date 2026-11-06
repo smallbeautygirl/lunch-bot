@@ -136,3 +136,22 @@ def test_workday_card_mentions_chief_through_teams_entity():
     entity = content["msteams"]["entities"][0]
     assert entity["mentioned"]["id"] == "chief@example.com"
     assert any("<at>Chief</at>" in block["text"] for block in content["body"])
+
+
+def test_first_suggestion_always_matches_the_fortune():
+    candidates = [
+        Candidate(make_shop(f"{cat}{i}", cat), Travel(TravelMode.WALK, 5))
+        for cat in ("麵", "飯", "日式", "小吃")
+        for i in range(10)
+    ] + [Candidate(make_shop("ramen", "拉麵"), Travel(TravelMode.WALK, 5))]
+    for seed in range(20):
+        picks = pick_suggestions(candidates, {"拉麵"}, random.Random(seed))
+        assert picks[0].shop["id"] == "ramen"
+
+
+def test_suggestions_still_filled_when_no_shop_matches_the_fortune():
+    candidates = [
+        Candidate(make_shop(f"{cat}", cat), Travel(TravelMode.WALK, 5))
+        for cat in ("麵", "飯", "日式")
+    ]
+    assert len(pick_suggestions(candidates, {"拉麵"}, random.Random(1))) == 3

@@ -73,12 +73,16 @@ def _weight(candidate: Candidate, favored: set[str]) -> float:
 def pick_suggestions(
     candidates: list[Candidate], favored: set[str], rng: random.Random
 ) -> list[Candidate]:
-    """Fortune-weighted picks first, then one fully random pick so the
-    horoscope never decides the whole list (e.g. hot pot every cold day)."""
+    """First pick always matches the fortune (when any shop does), so the card
+    never recommends ramen and then lists none; then a fortune-weighted pick;
+    the last is fully random so the horoscope never decides the whole list."""
     pool = list(candidates)
     picks: list[Candidate] = []
     while pool and len(picks) < CANDIDATE_COUNT:
-        if len(picks) < FORTUNE_PICK_COUNT:
+        matching = [c for c in pool if _weight(c, favored) > 1.0]
+        if not picks and matching:
+            chosen = rng.choice(matching)
+        elif len(picks) < FORTUNE_PICK_COUNT:
             weights = [_weight(c, favored) for c in pool]
             chosen = rng.choices(pool, weights=weights)[0]
         else:

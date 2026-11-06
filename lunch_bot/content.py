@@ -96,6 +96,8 @@ def _build_prompt(
             f"為「{sign}」寫一兩句今日運勢（純屬娛樂），並給午餐建議；"
             f"從這些店家分類挑 1 到 3 個最符合運勢的填入 favored_categories："
             f"{'、'.join(categories)}。"
+            "運勢裡的午餐建議只能提到你填入 favored_categories 的分類名稱，"
+            "不要提其他食物，也不要寫「其他」這個分類。"
         )
     wanted = {
         ExtraKind.JOKE: f"joke：一則和「{topic}」有關、適合辦公室的短笑話。",
