@@ -2,10 +2,11 @@ name: Morning horoscope
 
 on:
   schedule:
-    # 00:50 UTC = 08:50 Asia/Taipei, off the top of the hour: GitHub delays
-    # and sometimes drops runs scheduled on the hour, so this aims to land ~09:00.
+    # 01:10 UTC = 09:10 Asia/Taipei: after the 09:00 TWSE open so the card
+    # carries intraday numbers, and off the top of the hour, where GitHub
+    # delays and sometimes drops scheduled runs.
     # Runs every day: the script itself posts on workdays (incl. 補班) only.
-    - cron: "50 0 * * *"
+    - cron: "10 1 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
