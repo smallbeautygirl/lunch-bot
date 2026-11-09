@@ -13,6 +13,10 @@ on:
         description: "Print the card instead of posting"
         type: boolean
         default: true
+      post_for_real:
+        description: "Post as the real daily card, not [測試中] (external scheduler / catch-up)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -48,17 +52,19 @@ jobs:
           LUNCH_CHIEF_NAME: ${{ vars.LUNCH_CHIEF_NAME }}
           GROUP_MEMBERS: ${{ secrets.GROUP_MEMBERS }}
         run: |
-          # Only the 11:00 schedule is the real post; a manual run that posts
-          # is marked [測試中] and leaves the suggestion history untouched.
+          # The real post is the schedule, or a dispatch with post_for_real
+          # (external scheduler / catch-up). Any other dispatch that posts is
+          # marked [測試中]. Real posts are skipped past 11:45: GitHub has
+          # started scheduled runs 6+ hours late.
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             python -m lunch_bot.main --dry-run --test
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.post_for_real }}" != "true" ]; then
             python -m lunch_bot.main --test
           else
-            python -m lunch_bot.main
+            python -m lunch_bot.main --not-after 11:45
           fi
       - name: Save suggestion history
-        if: ${{ github.event_name == 'schedule' }}
+        if: ${{ github.event_name == 'schedule' || (inputs.post_for_real && !inputs.dry_run) }}
         run: |
           git config user.name "lunch-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

@@ -13,6 +13,10 @@ on:
         description: "Print the card instead of posting"
         type: boolean
         default: true
+      post_for_real:
+        description: "Post as the real daily card, not [測試中] (external scheduler / catch-up)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -38,12 +42,14 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GROUP_MEMBERS: ${{ secrets.GROUP_MEMBERS }}
         run: |
-          # Only the 09:10 schedule is the real post; a manual run that posts
-          # is marked [測試中].
+          # The real post is the schedule, or a dispatch with post_for_real
+          # (external scheduler / catch-up). Any other dispatch that posts is
+          # marked [測試中]. Real posts are skipped past 10:30: GitHub has
+          # started scheduled runs 6+ hours late.
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             python -m lunch_bot.morning --dry-run --test
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.post_for_real }}" != "true" ]; then
             python -m lunch_bot.morning --test
           else
-            python -m lunch_bot.morning
+            python -m lunch_bot.morning --not-after 10:30
           fi

@@ -6,7 +6,7 @@ import argparse
 import json
 import logging
 import sys
-from datetime import date
+from datetime import date, datetime, time
 
 import requests
 
@@ -71,7 +71,21 @@ def parse_cli_args(description: str) -> argparse.Namespace:
         action="store_true",
         help="Post with a [測試中] title (and, for lunch, keep history untouched)",
     )
+    parser.add_argument(
+        "--not-after",
+        type=time.fromisoformat,
+        help="Skip posting if started after this Taipei time (HH:MM)",
+    )
     return parser.parse_args()
+
+
+def is_past_deadline(not_after: time | None, now: datetime) -> bool:
+    """GitHub has started scheduled runs over six hours late; a 'good
+    morning' card at 15:00 or a lunch poll at 17:30 is worse than none."""
+    if not_after is None or now.time() <= not_after:
+        return False
+    logger.warning("Started too late, not posting", extra={"not_after": not_after})
+    return True
 
 
 def deliver(payload: dict, *, dry_run: bool, is_test: bool) -> None:

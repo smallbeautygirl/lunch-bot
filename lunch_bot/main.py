@@ -19,7 +19,12 @@ from .history import load_history, recent_shop_ids, save_suggestion
 from .lunch_map import load_lunch_map
 from .picker import find_candidates, pick_suggestions
 from .stocks import TAIEX, fetch_stock
-from .teams import configure_logging, deliver, parse_cli_args
+from .teams import (
+    configure_logging,
+    deliver,
+    is_past_deadline,
+    parse_cli_args,
+)
 from .zodiac import ZODIAC_SIGNS, read_group_members
 
 logger = logging.getLogger(__name__)
@@ -75,6 +80,8 @@ def build_holiday_payload(day: date, rng: random.Random) -> dict:
 def run() -> None:
     configure_logging()
     args = parse_cli_args("Lunch suggestion bot")
+    if is_past_deadline(args.not_after, datetime.now(TAIPEI)):
+        return
     day = args.date or datetime.now(TAIPEI).date()
     kind = classify_day(day, fetch_holiday_flags(day.year))
     logger.info("Day classified", extra={"day": day.isoformat(), "kind": kind})

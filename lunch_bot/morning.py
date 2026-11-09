@@ -14,7 +14,12 @@ from .config import TAIPEI
 from .horoscope import generate_horoscope
 from .morning_card import build_morning_card, stock_line
 from .stocks import TAIEX, fetch_overseas, fetch_stock
-from .teams import configure_logging, deliver, parse_cli_args
+from .teams import (
+    configure_logging,
+    deliver,
+    is_past_deadline,
+    parse_cli_args,
+)
 from .zodiac import ZODIAC_SIGNS, read_group_members
 
 logger = logging.getLogger(__name__)
@@ -42,6 +47,8 @@ def build_morning_payload(day: date) -> dict:
 def run() -> None:
     configure_logging()
     args = parse_cli_args("Morning horoscope and market post")
+    if is_past_deadline(args.not_after, datetime.now(TAIPEI)):
+        return
     day = args.date or datetime.now(TAIPEI).date()
     kind = classify_day(day, fetch_holiday_flags(day.year))
     logger.info("Day classified", extra={"day": day.isoformat(), "kind": kind})

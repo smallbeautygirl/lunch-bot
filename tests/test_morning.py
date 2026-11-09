@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, time
 
 from lunch_bot.horoscope import SignFortune, luckiest_signs, tidy_fortunes
 from lunch_bot.market import StockQuote
 from lunch_bot.morning_card import build_morning_card, stock_line
 from lunch_bot.stocks import parse_chart, quote_page_url
+from lunch_bot.teams import is_past_deadline
 from lunch_bot.zodiac import parse_members
 
 MONDAY = date(2026, 11, 9)
@@ -138,3 +139,14 @@ def test_stock_name_links_to_its_quote_page():
     assert url == "https://tw.stock.yahoo.com/quote/%5ETWII"
     line = stock_line(StockQuote("加權指數", 101, 100, "截至 09:05", url))
     assert f"**[加權指數]({url})**" in line
+
+
+def test_run_started_past_the_deadline_does_not_post():
+    afternoon = datetime(2026, 11, 7, 15, 2)
+    assert is_past_deadline(time(10, 30), afternoon)
+
+
+def test_run_on_time_or_without_deadline_posts():
+    on_time = datetime(2026, 11, 9, 9, 27)
+    assert not is_past_deadline(time(10, 30), on_time)
+    assert not is_past_deadline(None, on_time)
