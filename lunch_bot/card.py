@@ -9,13 +9,14 @@ from urllib.parse import quote
 
 from .config import LUNCH_MAP_BASE_URL
 from .content import DailyContent
-from .market import MOOD_LABELS, StockQuote
+from .market import MOOD_LABELS, Mood, StockQuote
 from .picker import Candidate
 from .teams import open_url_action, text_block, wrap_card
 from .travel import TravelMode
 
 WEEKDAY_NAMES = "一二三四五六日"
 RATING_IN_NOTE = re.compile(r"Google ([\d.]+)★")
+MOOD_RULES = {Mood.UP: "，只推 $$ 以上", Mood.FLAT: "", Mood.DOWN: "，只推 $ 平價"}
 TRAVEL_LABELS = {TravelMode.WALK: "🚶 走路", TravelMode.DRIVE: "🚗 開車"}
 
 
@@ -53,7 +54,10 @@ def _segment(label: str, lines: list[str]) -> dict:
 def _extra_blocks(content: DailyContent) -> list[dict]:
     blocks = []
     if joke := content.joke:
-        blocks.append(_segment("😂 笑話", [f"Q：{joke.question}", f"A：{joke.answer}"]))
+        lines = [f"Q：{joke.question}", f"A：{joke.answer}"]
+        if joke.explanation:
+            lines.append(f"_💡 笑點：{joke.explanation}_")
+        blocks.append(_segment("😂 笑話", lines))
     if lesson := content.english:
         blocks.append(
             _segment(
@@ -93,7 +97,7 @@ def market_line(quote: StockQuote) -> str:
     arrow = "📈" if quote.pct >= 0 else "📉"
     return (
         f"{arrow} **{quote.linked_name} {quote.pct:+.2f}%**（{quote.as_of}）"
-        f" → 今天{MOOD_LABELS[quote.mood]}"
+        f" → 今天{MOOD_LABELS[quote.mood]}{MOOD_RULES[quote.mood]}"
     )
 
 

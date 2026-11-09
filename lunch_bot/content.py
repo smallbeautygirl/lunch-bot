@@ -8,7 +8,24 @@ from pydantic import BaseModel
 
 from .calendar_tw import DayKind
 from .claude import ask_claude
+from .config import CLAUDE_MODEL
 
+# Haiku's jokes read like translated English puns nobody in the group got.
+# A stronger model plus Taiwanese classics as the style anchor; jokes run
+# about twice a week, so the extra cost is a few NT$ a month.
+JOKE_MODEL = "claude-sonnet-5-5"
+JOKE_PROMPT = (
+    "joke：一則台灣人一看就懂的一問一答冷笑話，question 是問題、answer 是答案。"
+    "用台灣日常用語，可以是國語或台語諧音，或台灣生活哏"
+    "（便利商店、捷運、夜市、機車、珍奶、颱風假、健保）；"
+    "可以和「{topic}」有關，但好笑比切題重要。"
+    "不要翻譯外國笑話，不要用中國大陸用語，不要需要專業知識的哏。"
+    "風格參考（不要照抄）："
+    "Q 綠豆從樓上摔下來會變成什麼？A 紅豆，因為流血了。"
+    "Q 為什麼飛機飛那麼高都不會撞到星星？A 因為星星會閃。"
+    "Q 哪一種花最沒力？A 茉莉花（台語聽起來像「沒力」）。"
+    "explanation 用一句話點出笑點在哪。"
+)
 # Rotating topics keep Haiku from telling the same joke every day.
 TOPICS = (
     "動物",
@@ -44,6 +61,7 @@ WEEKDAY_EXTRAS = (
 class Joke(BaseModel):
     question: str
     answer: str
+    explanation: str = ""
 
 
 class EnglishLesson(BaseModel):
@@ -85,8 +103,7 @@ def _build_prompt(
             "不要提其他食物，也不要寫「其他」這個分類。"
         )
     wanted = {
-        ExtraKind.JOKE: f"joke：一則和「{topic}」有關的一問一答冷笑話或諧音梗，"
-        "question 是問題、answer 是答案；不需要背景知識，台灣上班族一看就懂。",
+        ExtraKind.JOKE: JOKE_PROMPT.format(topic=topic),
         ExtraKind.ENGLISH: f"english：一句和「{topic}」有關的實用英文、中文翻譯、"
         "一個重點單字和它的意思。",
         ExtraKind.TRIVIA: f"trivia：一則和「{topic}」有關、可查證的冷知識，一兩句。",
@@ -114,7 +131,8 @@ def generate_content(
         extras=extras,
         topic=topic,
     )
-    content = ask_claude(prompt, DailyContent)
+    model = JOKE_MODEL if ExtraKind.JOKE in extras else CLAUDE_MODEL
+    content = ask_claude(prompt, DailyContent, model=model)
     if content is None:
         return DailyContent()
     content.favored_categories = [

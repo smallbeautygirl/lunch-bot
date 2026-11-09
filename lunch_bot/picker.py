@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from .config import CANDIDATE_COUNT, FORTUNE_PICK_COUNT, FORTUNE_WEIGHT, MAX_PRICE_BAND
-from .market import StockQuote, market_factor
+from .market import StockQuote, fits_market, market_factor
 from .travel import Travel, estimate_travel
 
 WEEKDAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -76,18 +76,25 @@ def _weight(candidate: Candidate, favored: set[str], quote: StockQuote | None) -
     return fortune * market_factor(candidate.shop, quote)
 
 
-def pick_suggestions(
-    candidates: list[Candidate],
+def _without_categories_of(
+    pool: list[Candidate], chosen: list[Candidate]
+) -> list[Candidate]:
+    """Prefer shops sharing no category with those already chosen; fall back to
+    any unchosen shop when that leaves nothing."""
+    taken = {category for c in chosen for category in c.shop["category"]}
+    unchosen = [c for c in pool if all(c is not picked for picked in chosen)]
+    return [c for c in unchosen if not taken & set(c.shop["category"])] or unchosen
+
+
+def _draw(
+    pool: list[Candidate],
+    picks: list[Candidate],
     favored: set[str],
     rng: random.Random,
-    quote: StockQuote | None = None,
+    quote: StockQuote | None,
 ) -> list[Candidate]:
-    """First pick always matches the fortune (when any shop does), so the card
-    never recommends ramen and then lists none; the first two are also
-    weighted by the market mood; the last is fully random so neither the
-    horoscope nor the market decides the whole list."""
-    pool = list(candidates)
-    picks: list[Candidate] = []
+    picks = list(picks)
+    pool = _without_categories_of(pool, picks)
     while pool and len(picks) < CANDIDATE_COUNT:
         matching = [c for c in pool if _matches_fortune(c, favored)]
         if len(picks) < FORTUNE_PICK_COUNT:
@@ -97,7 +104,23 @@ def pick_suggestions(
         else:
             chosen = rng.choice(pool)
         picks.append(chosen)
-        chosen_categories = set(chosen.shop["category"])
-        narrowed = [c for c in pool if not chosen_categories & set(c.shop["category"])]
-        pool = narrowed or [c for c in pool if c is not chosen]
+        pool = _without_categories_of(pool, picks)
+    return picks
+
+
+def pick_suggestions(
+    candidates: list[Candidate],
+    favored: set[str],
+    rng: random.Random,
+    quote: StockQuote | None = None,
+) -> list[Candidate]:
+    """Picks come from shops fitting the market mood (加菜 → $$+, 省一點 → $),
+    topped up from the rest only when too few fit. Within that, the first
+    pick always matches the fortune (when any shop does), the first two are
+    weighted, and the last is random so the horoscope never decides alone."""
+    fitting = [c for c in candidates if fits_market(c.shop, quote)]
+    picks = _draw(fitting, [], favored, rng, quote)
+    if len(picks) < CANDIDATE_COUNT:
+        others = [c for c in candidates if not fits_market(c.shop, quote)]
+        picks = _draw(others, picks, favored, rng, quote)
     return picks

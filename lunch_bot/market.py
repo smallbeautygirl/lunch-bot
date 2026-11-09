@@ -8,6 +8,9 @@ from enum import StrEnum
 
 MOOD_THRESHOLD_PCT = 0.3
 FANCY_PRICE_BAND = 3
+# What a 加菜 / 省一點 day may suggest: $$ and up / $ only.
+SPLURGE_MIN_PRICE_BAND = 2
+CHEAP_PRICE_BAND = 1
 FANCY_CATEGORIES = {"牛排", "海鮮", "火鍋"}
 CHEAP_CATEGORIES = {"便當", "自助餐", "麵", "水餃", "小吃", "速食", "早餐"}
 PCT_DECIMALS = 2
@@ -76,3 +79,18 @@ def market_factor(shop: dict, quote: StockQuote | None) -> float:
     if quote is None or tier is None:
         return 1.0
     return MOOD_FACTORS[quote.mood][tier]
+
+
+def fits_market(shop: dict, quote: StockQuote | None) -> bool:
+    """加菜 days suggest only $$ and up, 省一點 days only $; a shop with no
+    price falls back to its category. Flat or unknown market allows all."""
+    if quote is None or quote.mood is Mood.FLAT:
+        return True
+    price = shop.get("price")
+    if quote.mood is Mood.UP:
+        if price is None:
+            return price_tier(shop) is PriceTier.FANCY
+        return price >= SPLURGE_MIN_PRICE_BAND
+    if price is None:
+        return price_tier(shop) is PriceTier.CHEAP
+    return price == CHEAP_PRICE_BAND

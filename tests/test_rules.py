@@ -7,7 +7,7 @@ from lunch_bot.calendar_tw import DayKind, classify_day
 from lunch_bot.card import build_holiday_card, build_workday_card, market_line
 from lunch_bot.content import DailyContent, ExtraKind, Joke, extras_for
 from lunch_bot.history import has_posted_on, recent_shop_ids
-from lunch_bot.market import Mood, StockQuote, market_factor
+from lunch_bot.market import Mood, StockQuote, fits_market, market_factor
 from lunch_bot.picker import Candidate, find_candidates, is_open_at, pick_suggestions
 from lunch_bot.teams import mark_as_test
 from lunch_bot.travel import Travel, TravelMode, estimate_travel
@@ -243,3 +243,51 @@ def test_today_counts_as_posted_only_once_its_entry_is_saved():
     history = [{"date": "2026-11-05", "shop_ids": ["a"]}]
     assert not has_posted_on(history, FRIDAY)
     assert has_posted_on([*history, {"date": "2026-11-06", "shop_ids": []}], FRIDAY)
+
+
+def walkable(shop: dict) -> Candidate:
+    return Candidate(shop, Travel(TravelMode.WALK, 5))
+
+
+def test_splurge_day_suggests_only_two_dollar_signs_and_up():
+    cheap = [walkable(make_shop(f"c{i}", f"小吃{i}", price=1)) for i in range(30)]
+    pricey = [
+        walkable(make_shop(f"p{i}", f"義式{i}", price=2 + i % 2)) for i in range(5)
+    ]
+    for seed in range(30):
+        picks = pick_suggestions(cheap + pricey, set(), random.Random(seed), taiex(5.9))
+        assert all(p.shop["price"] >= 2 for p in picks)
+
+
+def test_saving_day_suggests_only_one_dollar_sign():
+    cheap = [walkable(make_shop(f"c{i}", f"小吃{i}", price=1)) for i in range(5)]
+    pricey = [walkable(make_shop(f"p{i}", f"義式{i}", price=3)) for i in range(30)]
+    for seed in range(30):
+        picks = pick_suggestions(cheap + pricey, set(), random.Random(seed), taiex(-4))
+        assert all(p.shop["price"] == 1 for p in picks)
+
+
+def test_market_filter_tops_up_when_too_few_shops_fit():
+    cheap = [walkable(make_shop(f"c{i}", f"小吃{i}", price=1)) for i in range(5)]
+    pricey = [walkable(make_shop("p0", "牛排", price=3))]
+    picks = pick_suggestions(cheap + pricey, set(), random.Random(1), taiex(5.9))
+    assert len(picks) == 3 and picks[0].shop["id"] == "p0"
+
+
+def test_unpriced_shop_follows_its_category_on_market_days():
+    hotpot = make_shop("h", "火鍋", price=None)
+    assert fits_market(hotpot, taiex(5.9)) and not fits_market(hotpot, taiex(-4))
+
+
+def test_joke_shows_its_punchline_explanation():
+    joke = Joke(question="哪種花最沒力？", answer="茉莉花", explanation="台語諧音")
+    card = build_workday_card(
+        day=FRIDAY,
+        sign="獅子座",
+        content=DailyContent(joke=joke),
+        picks=[],
+        chief=None,
+        cached_on=None,
+    )
+    texts = [b["text"] for b in card["attachments"][0]["content"]["body"]]
+    assert any("笑點：台語諧音" in t for t in texts)
