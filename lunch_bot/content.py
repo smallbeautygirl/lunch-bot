@@ -8,7 +8,6 @@ from pydantic import BaseModel
 
 from .calendar_tw import DayKind
 from .claude import ask_claude
-from .config import CLAUDE_MODEL
 
 # Haiku's jokes read like translated English puns nobody in the group got.
 # A stronger model plus Taiwanese classics as the style anchor; jokes run
@@ -16,17 +15,19 @@ from .config import CLAUDE_MODEL
 JOKE_MODEL = "claude-sonnet-5-5"
 JOKE_PROMPT = (
     "joke：一則台灣人一看就懂的一問一答冷笑話，question 是問題、answer 是答案。"
-    "用台灣日常用語，可以是國語或台語諧音，或台灣生活哏"
-    "（便利商店、捷運、夜市、機車、珍奶、颱風假、健保）；"
-    "可以和「{topic}」有關，但好笑比切題重要。"
+    "主題不限，好笑最重要。用台灣日常用語，笑點可以是國語或台語的諧音、"
+    "一詞兩義，或是腦筋急轉彎式的答案。"
     "不要翻譯外國笑話，不要用中國大陸用語，不要需要專業知識的哏。"
-    "風格參考（不要照抄）："
+    "風格參考（不要照抄，也不要沿用同樣的主題）："
     "Q 綠豆從樓上摔下來會變成什麼？A 紅豆，因為流血了。"
     "Q 為什麼飛機飛那麼高都不會撞到星星？A 因為星星會閃。"
     "Q 哪一種花最沒力？A 茉莉花（台語聽起來像「沒力」）。"
-    "explanation 用一句話點出笑點在哪。"
+    "Q 哪種動物最沒方向感？A 麋鹿（迷路）。"
+    "寫完先自我檢查：如果是諧音，兩個詞必須真的同音或幾乎同音；"
+    "explanation 要具體寫出是哪兩個詞同音、或哪個詞有兩種意思。"
+    "說不清楚笑點的就換一則。"
 )
-# Rotating topics keep Haiku from telling the same joke every day.
+# Rotating topics keep English lessons and trivia from repeating.
 TOPICS = (
     "動物",
     "辦公室",
@@ -103,7 +104,7 @@ def _build_prompt(
             "不要提其他食物，也不要寫「其他」這個分類。"
         )
     wanted = {
-        ExtraKind.JOKE: JOKE_PROMPT.format(topic=topic),
+        ExtraKind.JOKE: JOKE_PROMPT,
         ExtraKind.ENGLISH: f"english：一句和「{topic}」有關的實用英文、中文翻譯、"
         "一個重點單字和它的意思。",
         ExtraKind.TRIVIA: f"trivia：一則和「{topic}」有關、可查證的冷知識，一兩句。",
@@ -131,8 +132,10 @@ def generate_content(
         extras=extras,
         topic=topic,
     )
-    model = JOKE_MODEL if ExtraKind.JOKE in extras else CLAUDE_MODEL
-    content = ask_claude(prompt, DailyContent, model=model)
+    if ExtraKind.JOKE in extras:
+        content = ask_claude(prompt, DailyContent, model=JOKE_MODEL, effort="high")
+    else:
+        content = ask_claude(prompt, DailyContent)
     if content is None:
         return DailyContent()
     content.favored_categories = [

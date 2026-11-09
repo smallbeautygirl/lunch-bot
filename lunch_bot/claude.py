@@ -14,7 +14,11 @@ MAX_OUTPUT_TOKENS = 4000
 
 
 def ask_claude[Output: BaseModel](
-    prompt: str, output_format: type[Output], *, model: str = CLAUDE_MODEL
+    prompt: str,
+    output_format: type[Output],
+    *,
+    model: str = CLAUDE_MODEL,
+    effort: str = "medium",
 ) -> Output | None:
     """None on any failure, so a post never blocks on the generated parts."""
     if not os.getenv("ANTHROPIC_API_KEY"):
@@ -25,7 +29,7 @@ def ask_claude[Output: BaseModel](
         response = anthropic.Anthropic().messages.parse(
             model=model,
             max_tokens=MAX_OUTPUT_TOKENS,
-            output_config={"effort": "medium"},
+            output_config={"effort": effort},
             messages=[{"role": "user", "content": prompt}],
             output_format=output_format,
         )
