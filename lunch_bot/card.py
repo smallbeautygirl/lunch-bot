@@ -56,7 +56,7 @@ def _extra_blocks(content: DailyContent) -> list[dict]:
     if joke := content.joke:
         lines = [f"Q：{joke.question}", f"A：{joke.answer}"]
         if joke.explanation:
-            lines.append(f"_💡 笑點：{joke.explanation}_")
+            lines.append(f"_📚 笑點解析：{joke.explanation}_")
         blocks.append(_segment("😂 笑話", lines))
     if lesson := content.english:
         blocks.append(

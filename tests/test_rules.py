@@ -290,4 +290,4 @@ def test_joke_shows_its_punchline_explanation():
         cached_on=None,
     )
     texts = [b["text"] for b in card["attachments"][0]["content"]["body"]]
-    assert any("笑點：台語諧音" in t for t in texts)
+    assert any("笑點解析：台語諧音" in t for t in texts)
