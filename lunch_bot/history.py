@@ -15,6 +15,10 @@ def load_history(path: Path) -> list[dict]:
     return json.loads(path.read_text())
 
 
+def has_posted_on(history: list[dict], day: date) -> bool:
+    return any(entry["date"] == day.isoformat() for entry in history)
+
+
 def recent_shop_ids(history: list[dict], today: date) -> set[str]:
     """Shops suggested on the last few posting days, not counting a rerun today."""
     earlier = [entry for entry in history if entry["date"] < today.isoformat()]

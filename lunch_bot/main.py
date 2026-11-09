@@ -15,7 +15,7 @@ from .calendar_tw import DayKind, classify_day, fetch_holiday_flags
 from .card import build_holiday_card, build_workday_card
 from .config import HISTORY_PATH, TAIPEI, read_lunch_chief
 from .content import extras_for, generate_content
-from .history import load_history, recent_shop_ids, save_suggestion
+from .history import has_posted_on, load_history, recent_shop_ids, save_suggestion
 from .lunch_map import load_lunch_map
 from .picker import find_candidates, pick_suggestions
 from .stocks import TAIEX, fetch_stock
@@ -87,6 +87,13 @@ def run() -> None:
     logger.info("Day classified", extra={"day": day.isoformat(), "kind": kind})
     if kind is DayKind.WEEKEND:
         return
+    is_real_post = not (args.test or args.dry_run)
+    if is_real_post and has_posted_on(load_history(HISTORY_PATH), day):
+        # An on-time external trigger and a late GitHub schedule can both fire;
+        # the workflow's concurrency group makes the second see the first's
+        # committed history.
+        logger.info("Already posted today, skipping")
+        return
     rng = random.Random(day.isoformat())
     shop_ids: list[str] = []
     if kind is DayKind.WORKDAY:
@@ -94,7 +101,7 @@ def run() -> None:
     else:
         payload = build_holiday_payload(day, rng)
     deliver(payload, dry_run=args.dry_run, is_test=args.test)
-    if shop_ids and not args.test and not args.dry_run:
+    if shop_ids and is_real_post:
         save_suggestion(HISTORY_PATH, day, shop_ids)
 
 

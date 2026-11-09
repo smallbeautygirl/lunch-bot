@@ -6,7 +6,7 @@ from datetime import date
 from lunch_bot.calendar_tw import DayKind, classify_day
 from lunch_bot.card import build_holiday_card, build_workday_card, market_line
 from lunch_bot.content import DailyContent, ExtraKind, Joke, extras_for
-from lunch_bot.history import recent_shop_ids
+from lunch_bot.history import has_posted_on, recent_shop_ids
 from lunch_bot.market import Mood, StockQuote, market_factor
 from lunch_bot.picker import Candidate, find_candidates, is_open_at, pick_suggestions
 from lunch_bot.teams import mark_as_test
@@ -237,3 +237,9 @@ def test_market_drop_tilts_weighted_pick_towards_cheap_shops():
     ]
     cheap_share = sum(p.shop["price"] == 1 for p in first_picks) / len(first_picks)
     assert cheap_share > 0.75
+
+
+def test_today_counts_as_posted_only_once_its_entry_is_saved():
+    history = [{"date": "2026-11-05", "shop_ids": ["a"]}]
+    assert not has_posted_on(history, FRIDAY)
+    assert has_posted_on([*history, {"date": "2026-11-06", "shop_ids": []}], FRIDAY)
