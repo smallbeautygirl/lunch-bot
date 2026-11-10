@@ -5,7 +5,7 @@ from datetime import date
 
 from lunch_bot.calendar_tw import DayKind, classify_day
 from lunch_bot.card import build_holiday_card, build_workday_card, market_line
-from lunch_bot.content import DailyContent, ExtraKind, Joke, extras_for
+from lunch_bot.content import DailyContent, EnglishLesson, ExtraKind, Joke, extras_for
 from lunch_bot.history import has_posted_on, recent_shop_ids
 from lunch_bot.market import Mood, StockQuote, fits_market, market_factor
 from lunch_bot.picker import Candidate, find_candidates, is_open_at, pick_suggestions
@@ -291,3 +291,23 @@ def test_joke_shows_its_punchline_explanation():
     )
     texts = [b["text"] for b in card["attachments"][0]["content"]["body"]]
     assert any("笑點解析：台語諧音" in t for t in texts)
+
+
+def test_english_lesson_shows_its_homophone_mnemonic():
+    lesson = EnglishLesson(
+        word="kangaroo",
+        meaning="袋鼠",
+        mnemonic="袋鼠跳太快，每跳一下都要停下來「看個路」。",
+        sentence="A kangaroo can't walk backwards.",
+        translation="袋鼠不能倒著走。",
+    )
+    card = build_workday_card(
+        day=FRIDAY,
+        sign="獅子座",
+        content=DailyContent(english=lesson),
+        picks=[],
+        chief=None,
+        cached_on=None,
+    )
+    texts = " ".join(b["text"] for b in card["attachments"][0]["content"]["body"])
+    assert "**kangaroo**：袋鼠" in texts and "「看個路」" in texts

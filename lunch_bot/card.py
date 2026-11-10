@@ -61,11 +61,11 @@ def _extra_blocks(content: DailyContent) -> list[dict]:
     if lesson := content.english:
         blocks.append(
             _segment(
-                "📖 每日一句英文",
+                "📖 每日一字（諧音記憶法）",
                 [
-                    lesson.sentence,
-                    lesson.translation,
-                    f"🔑 **{lesson.keyword}**：{lesson.keyword_meaning}",
+                    f"🔑 **{lesson.word}**：{lesson.meaning}",
+                    f"🧠 {lesson.mnemonic}",
+                    f"_{lesson.sentence}_\n{lesson.translation}",
                 ],
             )
         )

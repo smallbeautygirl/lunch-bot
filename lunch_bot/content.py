@@ -9,10 +9,11 @@ from pydantic import BaseModel
 from .calendar_tw import DayKind
 from .claude import ask_claude
 
-# Haiku's jokes read like translated English puns nobody in the group got.
-# A stronger model plus Taiwanese classics as the style anchor; jokes run
-# about twice a week, so the extra cost is a few NT$ a month.
-JOKE_MODEL = "claude-sonnet-5-5"
+# Haiku's jokes read like translated English puns nobody in the group got,
+# and Chinese homophones are exactly what it gets wrong. Jokes and English
+# (the 諧音 mnemonic) use a stronger model; together they run four days a
+# week, still a few NT$ a month.
+WORDPLAY_MODEL = "claude-sonnet-5-5"
 JOKE_PROMPT = (
     "joke：一則台灣人一看就懂的一問一答冷笑話，question 是問題、answer 是答案。"
     "主題不限，好笑最重要。用台灣日常用語，笑點可以是國語或台語的諧音、"
@@ -33,6 +34,21 @@ JOKE_PROMPT = (
     "研究團隊建議讀者自行斟酌是否發笑。」"
     "示範的句子不要照抄，每次換一種正經口吻：論文摘要、新聞快訊、"
     "產品說明書、法律條文、氣象報告、主管簡報都可以。"
+)
+ENGLISH_PROMPT = (
+    "english：用「諧音記憶法」教一個英文單字，最好和「{topic}」有關。"
+    "程度要中高級（多益 800 分、大學程度以上），不要 apple、happy、meeting "
+    "這種上班族早就會的字。word 是單字，meaning 是中文意思。"
+    "mnemonic：找一段念起來像這個英文單字發音的中文（國語或台語都可以），"
+    "再用一兩句編一個好笑、有畫面的情境，把諧音和字義連在一起，"
+    "讓人記得很怪但忘不掉。諧音那段用「」框起來。"
+    "風格參考（不要照抄這些字）："
+    "kangaroo 袋鼠 → 袋鼠跳太快，每跳一下都要停下來「看個路」。"
+    "ambulance 救護車 → 躺在救護車上的人一直喊「俺不能死」。"
+    "ambition 雄心 → 有雄心的人每天對鏡子喊「俺必勝」。"
+    "寫完先自我檢查：把英文單字念出來，諧音必須真的聽起來像；"
+    "對不上的就換一個單字。"
+    "sentence 是一句用到這個單字的實用英文例句，translation 是它的中文翻譯。"
 )
 # Rotating topics keep English lessons and trivia from repeating.
 TOPICS = (
@@ -73,10 +89,16 @@ class Joke(BaseModel):
 
 
 class EnglishLesson(BaseModel):
+    word: str
+    meaning: str
+    # 諧音記憶: a Chinese phrase that sounds like the word, plus a silly scene
+    # tying it to the meaning (kangaroo → 袋鼠「看個路」).
+    mnemonic: str
     sentence: str
     translation: str
-    keyword: str
-    keyword_meaning: str
+
+
+WORDPLAY_EXTRAS = {ExtraKind.JOKE, ExtraKind.ENGLISH}
 
 
 class DailyContent(BaseModel):
@@ -112,8 +134,7 @@ def _build_prompt(
         )
     wanted = {
         ExtraKind.JOKE: JOKE_PROMPT,
-        ExtraKind.ENGLISH: f"english：一句和「{topic}」有關的實用英文、中文翻譯、"
-        "一個重點單字和它的意思。",
+        ExtraKind.ENGLISH: ENGLISH_PROMPT.format(topic=topic),
         ExtraKind.TRIVIA: f"trivia：一則和「{topic}」有關、可查證的冷知識，一兩句。",
     }
     lines += [wanted[extra] for extra in extras]
@@ -139,8 +160,8 @@ def generate_content(
         extras=extras,
         topic=topic,
     )
-    if ExtraKind.JOKE in extras:
-        content = ask_claude(prompt, DailyContent, model=JOKE_MODEL, effort="high")
+    if WORDPLAY_EXTRAS & set(extras):
+        content = ask_claude(prompt, DailyContent, model=WORDPLAY_MODEL, effort="high")
     else:
         content = ask_claude(prompt, DailyContent)
     if content is None:
