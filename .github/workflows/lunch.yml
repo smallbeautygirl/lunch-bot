@@ -1,12 +1,9 @@
 name: Lunch bot
 
 on:
-  schedule:
-    # 02:50 UTC = 10:50 Asia/Taipei, off the top of the hour: GitHub delays
-    # and sometimes drops runs scheduled on the hour (the 2026-11-06 11:00
-    # run never fired), so this aims to land ~11:00.
-    # Runs every day: the script itself skips weekends and handles 補班.
-    - cron: "50 2 * * *"
+  # Triggered by cron-job.org at 10:50 Asia/Taipei through the dispatch API
+  # (post_for_real=true). GitHub's own schedule ran 6+ hours late on
+  # 2026-11-07..09, so it is not used. Weekends/holidays are skipped in code.
   workflow_dispatch:
     inputs:
       dry_run:
@@ -52,10 +49,10 @@ jobs:
           LUNCH_CHIEF_NAME: ${{ vars.LUNCH_CHIEF_NAME }}
           GROUP_MEMBERS: ${{ secrets.GROUP_MEMBERS }}
         run: |
-          # The real post is the schedule, or a dispatch with post_for_real
-          # (external scheduler / catch-up). Any other dispatch that posts is
+          # The real post is a dispatch with post_for_real (cron-job.org or a
+          # manual catch-up). Any other dispatch that posts is
           # marked [測試中]. Real posts are skipped past 11:45: GitHub has
-          # started scheduled runs 6+ hours late.
+          # started runs 6+ hours late.
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             python -m lunch_bot.main --dry-run --test
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.post_for_real }}" != "true" ]; then

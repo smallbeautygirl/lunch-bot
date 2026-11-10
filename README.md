@@ -42,7 +42,7 @@
 3. **GitHub Variables**（選填）：`LUNCH_CHIEF_NAME`，卡片上 tag 顯示的名字，預設「午餐長」。
 4. 到 Actions → Lunch bot（或 Morning horoscope）→ Run workflow，勾著 `dry_run` 跑一次，在 log 裡看卡片內容。取消勾選再跑一次，就會真的發到群組。
 
-排程是 `10 1 * * *`（台北 09:10）和 `50 2 * * *`（台北 10:50）。GitHub 的排程常延遲幾分鐘到十幾分鐘，整點時段甚至會被丟掉（2026-11-06 的 11:00 就沒跑），所以刻意避開整點。早安卡排在 9:00 開盤後，送達時（約 9:15–9:35）台股已有盤中數字；午餐卡提早 10 分鐘，送達約在 11:00 前後。
+排程由 [cron-job.org](https://cron-job.org) 負責：每天台北 09:10、10:50 各呼叫一次 GitHub 的 workflow dispatch API（`POST /repos/smallbeautygirl/lunch-bot/actions/workflows/{morning,lunch}.yml/dispatches`，body `{"ref":"main","inputs":{"dry_run":"false","post_for_real":"true"}}`，用只有本 repo Actions 讀寫權限的 fine-grained token）。GitHub 自己的 `schedule` 在 2026-11-07～09 連續晚了 6 小時以上才跑，所以不用。週末、假日由程式自己跳過；開跑太晚（早安卡過 10:30、午餐卡過 11:45）也會跳過不發。
 
 ## 本機開發
 

@@ -1,12 +1,9 @@
 name: Morning horoscope
 
 on:
-  schedule:
-    # 01:10 UTC = 09:10 Asia/Taipei: after the 09:00 TWSE open so the card
-    # carries intraday numbers, and off the top of the hour, where GitHub
-    # delays and sometimes drops scheduled runs.
-    # Runs every day: the script itself posts on workdays (incl. 補班) only.
-    - cron: "10 1 * * *"
+  # Triggered by cron-job.org at 09:10 Asia/Taipei through the dispatch API
+  # (post_for_real=true). GitHub's own schedule ran 6+ hours late on
+  # 2026-11-07..09, so it is not used. Weekends/holidays are skipped in code.
   workflow_dispatch:
     inputs:
       dry_run:
@@ -42,10 +39,10 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GROUP_MEMBERS: ${{ secrets.GROUP_MEMBERS }}
         run: |
-          # The real post is the schedule, or a dispatch with post_for_real
-          # (external scheduler / catch-up). Any other dispatch that posts is
+          # The real post is a dispatch with post_for_real (cron-job.org or a
+          # manual catch-up). Any other dispatch that posts is
           # marked [測試中]. Real posts are skipped past 10:30: GitHub has
-          # started scheduled runs 6+ hours late.
+          # started runs 6+ hours late.
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             python -m lunch_bot.morning --dry-run --test
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.post_for_real }}" != "true" ]; then
