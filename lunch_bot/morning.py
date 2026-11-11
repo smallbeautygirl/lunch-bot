@@ -20,6 +20,7 @@ from .teams import (
     is_past_deadline,
     parse_cli_args,
 )
+from .weekly_reading import fetch_weekly_reading
 from .zodiac import ZODIAC_SIGNS, read_group_members
 
 logger = logging.getLogger(__name__)
@@ -30,10 +31,12 @@ def build_morning_payload(day: date) -> dict:
     taiex = fetch_stock(*TAIEX)
     overseas = fetch_overseas()
     market_lines = [stock_line(quote) for quote in [taiex, *overseas] if quote]
+    reading = fetch_weekly_reading(day)
     fortunes = generate_horoscope(
         day=day,
         signs=list(members) or list(ZODIAC_SIGNS),
         market_lines=market_lines,
+        reading=reading,
     )
     return build_morning_card(
         day=day,
@@ -41,6 +44,7 @@ def build_morning_payload(day: date) -> dict:
         overseas=overseas,
         fortunes=fortunes,
         members=members,
+        reading=reading,
     )
 
 
