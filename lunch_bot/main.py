@@ -17,6 +17,7 @@ from .config import HISTORY_PATH, TAIPEI, read_lunch_chief
 from .content import extras_for, generate_content
 from .history import has_posted_on, load_history, recent_shop_ids, save_suggestion
 from .lunch_map import load_lunch_map
+from .parking import fetch_parking_catalog
 from .picker import find_candidates, pick_suggestions
 from .stocks import TAIEX, fetch_stock
 from .teams import (
@@ -53,6 +54,10 @@ def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str
         rng=rng,
     )
     picks = pick_suggestions(candidates, set(content.favored_categories), rng, quote)
+    catalog = fetch_parking_catalog()
+    parking = (
+        {pick.shop["id"]: catalog.near(pick.shop) for pick in picks} if catalog else {}
+    )
     card = build_workday_card(
         day=day,
         sign=sign,
@@ -62,6 +67,8 @@ def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str
         cached_on=lunch_map.cached_on,
         quote=quote,
         sign_members=members.get(sign),
+        parking=parking,
+        parking_as_of=catalog.as_of if catalog else None,
     )
     return card, [pick.shop["id"] for pick in picks]
 
