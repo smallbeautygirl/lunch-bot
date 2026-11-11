@@ -4,7 +4,7 @@ from datetime import date, datetime, time
 
 from lunch_bot.horoscope import SignFortune, luckiest_signs, tidy_fortunes
 from lunch_bot.market import StockQuote
-from lunch_bot.morning_card import build_morning_card, stock_line
+from lunch_bot.morning_card import HoroscopeContext, build_morning_card, stock_line
 from lunch_bot.stocks import parse_chart, quote_page_url
 from lunch_bot.teams import is_past_deadline
 from lunch_bot.zodiac import parse_members
@@ -115,7 +115,7 @@ def test_morning_card_lists_names_stars_luckiest_sign_and_disclaimer():
         taiex=StockQuote("加權指數", 101, 100, "截至 09:05"),
         overseas=[],
         fortunes=[fortune("牡羊座", 4), fortune("獅子座", 2)],
-        members={"牡羊座": ["amy", "bob"]},
+        context=HoroscopeContext(members={"牡羊座": ["amy", "bob"]}),
     )
     texts = "\n".join(card_texts(card))
     assert "♈ 牡羊座**　amy、bob" in texts
@@ -128,7 +128,7 @@ def test_morning_card_lists_names_stars_luckiest_sign_and_disclaimer():
 
 def test_morning_card_still_posts_when_market_and_horoscope_fail():
     card = build_morning_card(
-        day=MONDAY, taiex=None, overseas=[], fortunes=[], members={}
+        day=MONDAY, taiex=None, overseas=[], fortunes=[], context=HoroscopeContext()
     )
     texts = "\n".join(card_texts(card))
     assert "股市資料暫時抓不到" in texts and "運勢暫時算不出來" in texts

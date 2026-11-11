@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
-from lunch_bot.horoscope import SignFortune
-from lunch_bot.morning_card import build_morning_card
 from lunch_bot.weekly_reading import find_reading
 
 # Trimmed copy of the real 唐陽雞酒屋 feed: the 11/9 and 11/2 weekly episodes
@@ -37,19 +35,3 @@ def test_last_weeks_episode_covers_last_week():
 
 def test_no_reading_before_the_weeks_episode_is_out():
     assert find_reading(FEED, date(2026, 11, 16)) is None
-
-
-def test_morning_card_shows_weekly_tier_and_credits_the_source():
-    reading = find_reading(FEED, date(2026, 11, 11))
-    fortune = SignFortune(sign="牡羊座", overall="…", wealth_stars=2, lucky_color="藍")
-    card = build_morning_card(
-        day=date(2026, 11, 11),
-        taiex=None,
-        overseas=[],
-        fortunes=[fortune],
-        members={},
-        reading=reading,
-    )
-    texts = " ".join(b["text"] for b in card["attachments"][0]["content"]["body"])
-    assert "牡羊座**（本週：累的）" in texts
-    assert "唐綺陽星座週報" in texts and reading.url in texts

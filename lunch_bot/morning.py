@@ -12,7 +12,9 @@ from datetime import date, datetime
 from .calendar_tw import DayKind, classify_day, fetch_holiday_flags
 from .config import TAIPEI
 from .horoscope import generate_horoscope
-from .morning_card import build_morning_card, stock_line
+from .mafalda import fetch_mafalda_reading
+from .morning_card import HoroscopeContext, build_morning_card, stock_line
+from .sign_sources import collect_sources
 from .stocks import TAIEX, fetch_overseas, fetch_stock
 from .teams import (
     configure_logging,
@@ -31,20 +33,20 @@ def build_morning_payload(day: date) -> dict:
     taiex = fetch_stock(*TAIEX)
     overseas = fetch_overseas()
     market_lines = [stock_line(quote) for quote in [taiex, *overseas] if quote]
-    reading = fetch_weekly_reading(day)
-    fortunes = generate_horoscope(
-        day=day,
-        signs=list(members) or list(ZODIAC_SIGNS),
-        market_lines=market_lines,
-        reading=reading,
+    signs = list(members) or list(ZODIAC_SIGNS)
+    tang = fetch_weekly_reading(day)
+    mafalda = fetch_mafalda_reading(day, signs)
+    sources = collect_sources(signs, tang, mafalda)
+    fortunes = generate_horoscope(day=day, sources=sources, market_lines=market_lines)
+    context = HoroscopeContext(
+        members=members, sources=sources, tang=tang, mafalda=mafalda
     )
     return build_morning_card(
         day=day,
         taiex=taiex,
         overseas=overseas,
         fortunes=fortunes,
-        members=members,
-        reading=reading,
+        context=context,
     )
 
 

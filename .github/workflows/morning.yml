@@ -15,6 +15,10 @@ on:
         description: "Post as the real daily card, not [測試中] (external scheduler / catch-up)"
         type: boolean
         default: false
+      date:
+        description: "Dry run only: build the card for this day (YYYY-MM-DD)"
+        type: string
+        default: ""
       note:
         description: "Announcement shown under the title (e.g. what a test post changes)"
         type: string
@@ -45,6 +49,7 @@ jobs:
       - name: Post morning horoscope
         env:
           NOTE: ${{ inputs.note }}
+          CARD_DATE: ${{ inputs.date }}
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GROUP_MEMBERS: ${{ secrets.GROUP_MEMBERS }}
@@ -54,7 +59,7 @@ jobs:
           # marked [測試中]. Real posts are skipped past 10:30: GitHub has
           # started runs 6+ hours late.
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            python -m lunch_bot.morning --dry-run --test --note "$NOTE"
+            python -m lunch_bot.morning --dry-run --test --note "$NOTE" ${CARD_DATE:+--date "$CARD_DATE"}
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.post_for_real }}" != "true" ]; then
             python -m lunch_bot.morning --test --note "$NOTE"
           elif [ "${{ inputs.catch_up }}" = "true" ]; then
