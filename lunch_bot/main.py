@@ -60,6 +60,7 @@ def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str
         extras=extras_for(day, DayKind.WORKDAY),
         rng=rng,
         sources=sources,
+        mood=quote.mood if quote else None,
         mix=role_mixes({sign: members.get(sign, [])}, read_member_roles()).get(
             sign, ""
         ),

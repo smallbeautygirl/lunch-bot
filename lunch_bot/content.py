@@ -14,6 +14,7 @@ from .horoscope import (
     WORKPLACE_CONTEXT,
     source_line,
 )
+from .market import Mood
 from .roles import ROLE_SCENES
 from .sign_sources import SignSources
 
@@ -58,6 +59,14 @@ ENGLISH_PROMPT = (
     "對不上的就換一個單字。"
     "sentence 是一句用到這個單字的實用英文例句，translation 是它的中文翻譯。"
 )
+# The picks follow the market (加菜 only $$+, 省一點 only $); a fortune saying
+# "play it safe with a 便當" above three $$$ shops reads as a contradiction.
+MOOD_LUNCH_HINTS = {
+    Mood.UP: "今天台股大漲是加菜日，推薦的店都是 $$ 以上，"
+    "午餐建議要往吃好一點的方向寫。",
+    Mood.DOWN: "今天台股下跌是省一點日，推薦的店都是平價的 $，"
+    "午餐建議要往省錢的方向寫。",
+}
 # Rotating topics keep English lessons and trivia from repeating.
 TOPICS = (
     "動物",
@@ -128,6 +137,7 @@ def _fortune_lines(
     categories: list[str],
     sources: SignSources | None,
     mix: str,
+    mood: Mood | None,
 ) -> list[str]:
     """Same voice as the morning card's horoscope, so the lucky sign at lunch
     reads like the 09:10 one rather than a generic fortune cookie."""
@@ -144,6 +154,8 @@ def _fortune_lines(
     ]
     if mix:
         lines += [ROLE_SCENES, f"{sign}的成員角色：{mix}。"]
+    if mood in MOOD_LUNCH_HINTS:
+        lines.append(MOOD_LUNCH_HINTS[mood])
     if sources and (sources.tang or sources.mafalda):
         lines.append(
             "參考兩位占星師本週對這個星座的看法，綜合兩邊的方向，不要照抄原句"
@@ -162,10 +174,11 @@ def _build_prompt(
     topic: str,
     sources: SignSources | None = None,
     mix: str = "",
+    mood: Mood | None = None,
 ) -> str:
     lines = [f"今天是 {day.isoformat()}，請用台灣繁體中文，語氣輕鬆。"]
     if sign:
-        lines += _fortune_lines(sign, categories, sources, mix)
+        lines += _fortune_lines(sign, categories, sources, mix, mood)
     wanted = {
         ExtraKind.JOKE: JOKE_PROMPT,
         ExtraKind.ENGLISH: ENGLISH_PROMPT.format(topic=topic),
@@ -185,6 +198,7 @@ def generate_content(
     rng: random.Random,
     sources: SignSources | None = None,
     mix: str = "",
+    mood: Mood | None = None,
 ) -> DailyContent:
     """Never blocks the lunch post: on any API failure it returns empty
     content and the message goes out without the fun parts."""
@@ -197,6 +211,7 @@ def generate_content(
         topic=topic,
         sources=sources,
         mix=mix,
+        mood=mood,
     )
     if WORDPLAY_EXTRAS & set(extras):
         content = ask_claude(prompt, DailyContent, model=WORDPLAY_MODEL, effort="high")

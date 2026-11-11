@@ -15,7 +15,7 @@ OPENING_MAX_CHARS = 150
 FRESHNESS_RULES = (
     "不要用星座刻板印象當梗（例如牡羊衝動、處女龜毛、天蠍記仇、雙子善變），"
     "也不要寫咖啡。每個星座的角度都要不一樣，"
-    "並配合今天是星期幾（週一收心、週五快放假之類）。"
+    "整張卡最多只有一個星座提到今天星期幾（週一收心、週五快放假之類），其他不要提。"
 )
 # Only what linkervision.com says publicly: this repo and its Actions logs are
 # public, so no customer, project or internal service names belong here.
