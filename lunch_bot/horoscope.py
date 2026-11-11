@@ -5,6 +5,7 @@ from datetime import date
 from pydantic import BaseModel
 
 from .claude import ask_claude
+from .roles import ROLE_SCENES
 from .sign_sources import MAX_STARS, MIN_STARS, SignSources
 from .zodiac import ZODIAC_SIGNS
 
@@ -22,8 +23,8 @@ WORKPLACE_CONTEXT = (
     "讀者是 Linker Vision 的同事，做視覺 AI 平台（Linker AI Nexa）："
     "Mirra 合成資料、DataVerse 模型訓練、Observ 大規模 VLM 部署，"
     "應用在智慧城市、捷運機場港口等關鍵基礎設施、工廠和數位分身，"
-    "和 NVIDIA 合作很深。情境可以用他們的日常，例如客戶 demo、POC、"
-    "排 GPU 跑訓練、標註資料、模型上線、改需求、改 Azure Boards 的票、出國參展；"
+    "和 NVIDIA 合作很深。群組裡有 BD、PM、FAE、RD、DevOps 和 RD 主管，"
+    "情境要用他們各自的日常，不要每個人都寫成在跑 GPU。"
     "公司用 Teams 溝通（不是 Slack）。"
     "偶爾提到產品名就好，不要每則都提，也不要編造客戶或案子名稱。"
 )
@@ -74,8 +75,20 @@ def _source_lines(sources: dict[str, SignSources]) -> list[str]:
     return [SOURCE_RULES, *(source_line(sign, s) for sign, s in sources.items())]
 
 
+def _role_lines(mixes: dict[str, str]) -> list[str]:
+    if not mixes:
+        return []
+    return [
+        ROLE_SCENES,
+        "各星座成員的角色：" + "；".join(f"{s}：{m}" for s, m in mixes.items()),
+    ]
+
+
 def _build_prompt(
-    day: date, sources: dict[str, SignSources], market_lines: list[str]
+    day: date,
+    sources: dict[str, SignSources],
+    market_lines: list[str],
+    mixes: dict[str, str],
 ) -> str:
     lines = [
         f"今天是 {day.isoformat()}（星期{WEEKDAY_NAMES[day.weekday()]}），"
@@ -89,6 +102,7 @@ def _build_prompt(
         FRESHNESS_RULES,
         WORKPLACE_CONTEXT,
         FRAMING_RULES,
+        *_role_lines(mixes),
         *_source_lines(sources),
     ]
     if market_lines:
@@ -129,9 +143,14 @@ def luckiest_signs(fortunes: list[SignFortune]) -> list[str]:
 
 
 def generate_horoscope(
-    *, day: date, sources: dict[str, SignSources], market_lines: list[str]
+    *,
+    day: date,
+    sources: dict[str, SignSources],
+    market_lines: list[str],
+    mixes: dict[str, str] | None = None,
 ) -> list[SignFortune]:
-    horoscope = ask_claude(_build_prompt(day, sources, market_lines), Horoscope)
+    prompt = _build_prompt(day, sources, market_lines, mixes or {})
+    horoscope = ask_claude(prompt, Horoscope)
     if horoscope is None:
         return []
     return tidy_fortunes(horoscope.fortunes, list(sources), sources)

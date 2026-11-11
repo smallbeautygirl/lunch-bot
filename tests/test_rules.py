@@ -338,3 +338,12 @@ def test_unparseable_claude_reply_gives_no_content_instead_of_crashing(monkeypat
     monkeypatch.setattr(client.messages, "parse", cut_off_reply)
     monkeypatch.setattr(claude.anthropic, "Anthropic", lambda: client)
     assert claude.ask_claude("prompt", Reply) is None
+
+
+def test_role_mix_counts_each_signs_roles_most_common_first():
+    from lunch_bot.roles import role_mix, role_mixes
+
+    roles = {"amy": "RD", "bob": "RD", "cat": "FAE"}
+    assert role_mix(["cat", "amy", "bob", "dan"], roles) == "RD×2、FAE×1"
+    mixes = role_mixes({"牡羊座": ["amy", "cat"], "金牛座": ["dan"]}, roles)
+    assert mixes == {"牡羊座": "RD×1、FAE×1"}

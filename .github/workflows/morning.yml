@@ -54,6 +54,7 @@ jobs:
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GROUP_MEMBERS: ${{ secrets.GROUP_MEMBERS }}
+          MEMBER_ROLES: ${{ secrets.MEMBER_ROLES }}
         run: |
           # The real post is a dispatch with post_for_real (the crontab or a
           # manual catch-up). Any other dispatch that posts is

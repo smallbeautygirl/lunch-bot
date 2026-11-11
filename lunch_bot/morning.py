@@ -16,6 +16,7 @@ from .history import load_post_days, record_post_day
 from .horoscope import WORKPLACE_CONTEXT, generate_horoscope
 from .mafalda import fetch_mafalda_reading
 from .morning_card import HoroscopeContext, build_morning_card, stock_line
+from .roles import read_member_roles, role_mixes
 from .sign_sources import collect_sources
 from .stocks import TAIEX, fetch_overseas, fetch_stock
 from .teams import (
@@ -39,7 +40,12 @@ def build_morning_payload(day: date) -> dict:
     tang = fetch_weekly_reading(day)
     mafalda = fetch_mafalda_reading(day, signs)
     sources = collect_sources(signs, tang, mafalda)
-    fortunes = generate_horoscope(day=day, sources=sources, market_lines=market_lines)
+    fortunes = generate_horoscope(
+        day=day,
+        sources=sources,
+        market_lines=market_lines,
+        mixes=role_mixes(members, read_member_roles()),
+    )
     context = HoroscopeContext(
         members=members, sources=sources, tang=tang, mafalda=mafalda
     )

@@ -14,6 +14,7 @@ from .horoscope import (
     WORKPLACE_CONTEXT,
     source_line,
 )
+from .roles import ROLE_SCENES
 from .sign_sources import SignSources
 
 # Haiku's jokes read like translated English puns nobody in the group got,
@@ -123,7 +124,10 @@ def extras_for(day: date, kind: DayKind) -> list[ExtraKind]:
 
 
 def _fortune_lines(
-    sign: str, categories: list[str], sources: SignSources | None
+    sign: str,
+    categories: list[str],
+    sources: SignSources | None,
+    mix: str,
 ) -> list[str]:
     """Same voice as the morning card's horoscope, so the lucky sign at lunch
     reads like the 09:10 one rather than a generic fortune cookie."""
@@ -138,6 +142,8 @@ def _fortune_lines(
         WORKPLACE_CONTEXT,
         FRAMING_RULES,
     ]
+    if mix:
+        lines += [ROLE_SCENES, f"{sign}的成員角色：{mix}。"]
     if sources and (sources.tang or sources.mafalda):
         lines.append(
             "參考兩位占星師本週對這個星座的看法，綜合兩邊的方向，不要照抄原句"
@@ -155,10 +161,11 @@ def _build_prompt(
     extras: list[ExtraKind],
     topic: str,
     sources: SignSources | None = None,
+    mix: str = "",
 ) -> str:
     lines = [f"今天是 {day.isoformat()}，請用台灣繁體中文，語氣輕鬆。"]
     if sign:
-        lines += _fortune_lines(sign, categories, sources)
+        lines += _fortune_lines(sign, categories, sources, mix)
     wanted = {
         ExtraKind.JOKE: JOKE_PROMPT,
         ExtraKind.ENGLISH: ENGLISH_PROMPT.format(topic=topic),
@@ -177,6 +184,7 @@ def generate_content(
     extras: list[ExtraKind],
     rng: random.Random,
     sources: SignSources | None = None,
+    mix: str = "",
 ) -> DailyContent:
     """Never blocks the lunch post: on any API failure it returns empty
     content and the message goes out without the fun parts."""
@@ -188,6 +196,7 @@ def generate_content(
         extras=extras,
         topic=topic,
         sources=sources,
+        mix=mix,
     )
     if WORDPLAY_EXTRAS & set(extras):
         content = ask_claude(prompt, DailyContent, model=WORDPLAY_MODEL, effort="high")
