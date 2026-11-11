@@ -59,7 +59,12 @@ def run() -> None:
     # Holidays and weekends repeat the last trading day's market; skip them.
     if kind is not DayKind.WORKDAY:
         return
-    deliver(build_morning_payload(day), dry_run=args.dry_run, is_test=args.test)
+    deliver(
+        build_morning_payload(day),
+        dry_run=args.dry_run,
+        is_test=args.test,
+        note=args.note,
+    )
 
 
 if __name__ == "__main__":

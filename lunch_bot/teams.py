@@ -72,6 +72,10 @@ def parse_cli_args(description: str) -> argparse.Namespace:
         help="Post with a [測試中] title (and, for lunch, keep history untouched)",
     )
     parser.add_argument(
+        "--note",
+        help="Announcement shown under the title, e.g. what a test post changes",
+    )
+    parser.add_argument(
         "--not-after",
         type=time.fromisoformat,
         help="Skip posting if started after this Taipei time (HH:MM)",
@@ -88,7 +92,17 @@ def is_past_deadline(not_after: time | None, now: datetime) -> bool:
     return True
 
 
-def deliver(payload: dict, *, dry_run: bool, is_test: bool) -> None:
+def add_note(payload: dict, note: str) -> dict:
+    body = payload["attachments"][0]["content"]["body"]
+    body.insert(1, text_block(f"📣 {note}", color="Accent", spacing="Small"))
+    return payload
+
+
+def deliver(
+    payload: dict, *, dry_run: bool, is_test: bool, note: str | None = None
+) -> None:
+    if note:
+        payload = add_note(payload, note)
     if is_test:
         payload = mark_as_test(payload)
     if dry_run:

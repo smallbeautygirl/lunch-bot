@@ -9,7 +9,7 @@ from lunch_bot.content import DailyContent, EnglishLesson, ExtraKind, Joke, extr
 from lunch_bot.history import has_posted_on, recent_shop_ids
 from lunch_bot.market import Mood, StockQuote, fits_market, market_factor
 from lunch_bot.picker import Candidate, find_candidates, is_open_at, pick_suggestions
-from lunch_bot.teams import mark_as_test
+from lunch_bot.teams import add_note, mark_as_test
 from lunch_bot.travel import Travel, TravelMode, estimate_travel
 
 FRIDAY = date(2026, 11, 6)
@@ -311,3 +311,9 @@ def test_english_lesson_shows_its_homophone_mnemonic():
     )
     texts = " ".join(b["text"] for b in card["attachments"][0]["content"]["body"])
     assert "**kangaroo**：袋鼠" in texts and "「看個路」" in texts
+
+
+def test_note_appears_right_under_the_title():
+    card = build_holiday_card(day=date(2026, 10, 10), content=DailyContent())
+    body = add_note(card, "運勢改參考週報")["attachments"][0]["content"]["body"]
+    assert body[1]["text"] == "📣 運勢改參考週報"

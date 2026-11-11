@@ -15,6 +15,10 @@ on:
         description: "Post as the real daily card, not [測試中] (external scheduler / catch-up)"
         type: boolean
         default: false
+      note:
+        description: "Announcement shown under the title (e.g. what a test post changes)"
+        type: string
+        default: ""
       catch_up:
         description: "Manual catch-up: post for real even past the deadline"
         type: boolean
@@ -48,6 +52,7 @@ jobs:
           restore-keys: lunch-map-
       - name: Post lunch suggestion
         env:
+          NOTE: ${{ inputs.note }}
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           LUNCH_CHIEF_EMAIL: ${{ secrets.LUNCH_CHIEF_EMAIL }}
@@ -59,9 +64,9 @@ jobs:
           # marked [測試中]. Real posts are skipped past 11:45: GitHub has
           # started runs 6+ hours late.
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            python -m lunch_bot.main --dry-run --test
+            python -m lunch_bot.main --dry-run --test --note "$NOTE"
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.post_for_real }}" != "true" ]; then
-            python -m lunch_bot.main --test
+            python -m lunch_bot.main --test --note "$NOTE"
           elif [ "${{ inputs.catch_up }}" = "true" ]; then
             python -m lunch_bot.main
           else

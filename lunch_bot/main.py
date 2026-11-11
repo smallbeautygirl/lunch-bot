@@ -100,7 +100,7 @@ def run() -> None:
         payload, shop_ids = build_workday_payload(day, rng)
     else:
         payload = build_holiday_payload(day, rng)
-    deliver(payload, dry_run=args.dry_run, is_test=args.test)
+    deliver(payload, dry_run=args.dry_run, is_test=args.test, note=args.note)
     if shop_ids and is_real_post:
         save_suggestion(HISTORY_PATH, day, shop_ids)
 
