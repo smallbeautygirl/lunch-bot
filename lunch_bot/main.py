@@ -20,7 +20,6 @@ from .lunch_map import load_lunch_map
 from .mafalda import fetch_mafalda_reading
 from .parking import fetch_parking_catalog
 from .picker import find_candidates, pick_suggestions
-from .roles import read_member_roles, role_mixes
 from .sign_sources import collect_sources
 from .stocks import TAIEX, fetch_stock
 from .teams import (
@@ -61,9 +60,6 @@ def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str
         rng=rng,
         sources=sources,
         mood=quote.mood if quote else None,
-        mix=role_mixes({sign: members.get(sign, [])}, read_member_roles()).get(
-            sign, ""
-        ),
     )
     picks = pick_suggestions(candidates, set(content.favored_categories), rng, quote)
     catalog = fetch_parking_catalog()

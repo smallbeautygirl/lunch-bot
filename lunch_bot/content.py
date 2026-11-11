@@ -8,14 +8,8 @@ from pydantic import BaseModel
 
 from .calendar_tw import DayKind
 from .claude import ask_claude
-from .horoscope import (
-    FRAMING_RULES,
-    FRESHNESS_RULES,
-    WORKPLACE_CONTEXT,
-    source_line,
-)
+from .horoscope import FRAMING_RULES, FRESHNESS_RULES, source_line
 from .market import Mood
-from .roles import ROLE_SCENES
 from .sign_sources import SignSources
 
 # Haiku's jokes read like translated English puns nobody in the group got,
@@ -136,24 +130,21 @@ def _fortune_lines(
     sign: str,
     categories: list[str],
     sources: SignSources | None,
-    mix: str,
     mood: Mood | None,
 ) -> list[str]:
     """Same voice as the morning card's horoscope, so the lucky sign at lunch
     reads like the 09:10 one rather than a generic fortune cookie."""
     lines = [
-        f"為「{sign}」寫今日運勢（純屬娛樂），fortune 最多兩句、不超過 60 字："
-        "第一句是帶公司日常的建議，第二句是午餐建議，要有幽默或反差。"
+        f"為「{sign}」寫今日運勢（純屬娛樂），fortune 剛好兩句、不超過 70 字："
+        "第一句是一般的星座運勢（心情、人際、感情、健康或整體運），"
+        "第二句是午餐建議，要有幽默或反差。不用寫工作。"
         f"從這些店家分類挑 1 到 3 個最符合運勢的填入 favored_categories："
         f"{'、'.join(categories)}。"
         "午餐建議只能提到你填入 favored_categories 的分類名稱，"
         "不要提其他食物，也不要寫「其他」這個分類。",
         FRESHNESS_RULES,
-        WORKPLACE_CONTEXT,
         FRAMING_RULES,
     ]
-    if mix:
-        lines += [ROLE_SCENES, f"{sign}的成員角色：{mix}。"]
     if mood in MOOD_LUNCH_HINTS:
         lines.append(MOOD_LUNCH_HINTS[mood])
     if sources and (sources.tang or sources.mafalda):
@@ -173,12 +164,11 @@ def _build_prompt(
     extras: list[ExtraKind],
     topic: str,
     sources: SignSources | None = None,
-    mix: str = "",
     mood: Mood | None = None,
 ) -> str:
     lines = [f"今天是 {day.isoformat()}，請用台灣繁體中文，語氣輕鬆。"]
     if sign:
-        lines += _fortune_lines(sign, categories, sources, mix, mood)
+        lines += _fortune_lines(sign, categories, sources, mood)
     wanted = {
         ExtraKind.JOKE: JOKE_PROMPT,
         ExtraKind.ENGLISH: ENGLISH_PROMPT.format(topic=topic),
@@ -197,7 +187,6 @@ def generate_content(
     extras: list[ExtraKind],
     rng: random.Random,
     sources: SignSources | None = None,
-    mix: str = "",
     mood: Mood | None = None,
 ) -> DailyContent:
     """Never blocks the lunch post: on any API failure it returns empty
@@ -210,7 +199,6 @@ def generate_content(
         extras=extras,
         topic=topic,
         sources=sources,
-        mix=mix,
         mood=mood,
     )
     if WORDPLAY_EXTRAS & set(extras):
