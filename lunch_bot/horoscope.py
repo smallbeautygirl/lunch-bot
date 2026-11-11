@@ -23,7 +23,8 @@ WORKPLACE_CONTEXT = (
     "Mirra 合成資料、DataVerse 模型訓練、Observ 大規模 VLM 部署，"
     "應用在智慧城市、捷運機場港口等關鍵基礎設施、工廠和數位分身，"
     "和 NVIDIA 合作很深。情境可以用他們的日常，例如客戶 demo、POC、"
-    "排 GPU 跑訓練、標註資料、模型上線、改需求、改票、出國參展；"
+    "排 GPU 跑訓練、標註資料、模型上線、改需求、改 Azure Boards 的票、出國參展；"
+    "公司用 Teams 溝通（不是 Slack）。"
     "偶爾提到產品名就好，不要每則都提，也不要編造客戶或案子名稱。"
 )
 SOURCE_RULES = (
