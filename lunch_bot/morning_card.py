@@ -123,10 +123,13 @@ def build_morning_card(
     overseas: list[StockQuote],
     fortunes: list[SignFortune],
     context: HoroscopeContext,
+    almanac: list[str] | None = None,
 ) -> dict:
     title = f"☀️ 早安！{day.month}/{day.day}（{WEEKDAY_NAMES[day.weekday()]}）"
     body = [text_block(title, size="Large", weight="Bolder")]
     body += _market_blocks(taiex, overseas)
+    if almanac:
+        body.append(text_block("\n\n".join(almanac), separator=True))
     body += _horoscope_blocks(fortunes, context)
     body.append(text_block(DISCLAIMER, isSubtle=True, size="Small", separator=True))
     return wrap_card(body, actions=[open_url_action("看即時盤", LIVE_TAIEX_URL)])

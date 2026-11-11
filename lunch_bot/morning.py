@@ -9,10 +9,11 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime
 
+from .almanac import almanac_lines, compute_almanac, translate_almanac
 from .calendar_tw import DayKind, classify_day, fetch_holiday_flags
 from .config import MORNING_POSTS_PATH, TAIPEI
 from .history import load_post_days, record_post_day
-from .horoscope import generate_horoscope
+from .horoscope import WORKPLACE_CONTEXT, generate_horoscope
 from .mafalda import fetch_mafalda_reading
 from .morning_card import HoroscopeContext, build_morning_card, stock_line
 from .sign_sources import collect_sources
@@ -42,12 +43,15 @@ def build_morning_payload(day: date) -> dict:
     context = HoroscopeContext(
         members=members, sources=sources, tang=tang, mafalda=mafalda
     )
+    almanac = compute_almanac(day)
+    readings = translate_almanac(almanac, WORKPLACE_CONTEXT)
     return build_morning_card(
         day=day,
         taiex=taiex,
         overseas=overseas,
         fortunes=fortunes,
         context=context,
+        almanac=almanac_lines(almanac, readings),
     )
 
 

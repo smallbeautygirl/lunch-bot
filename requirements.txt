@@ -1,3 +1,5 @@
 anthropic>=1.0,<2
 pydantic>=2,<3
 requests>=2.32,<3
+lunar_python>=1.4.9,<2
+opencc-python-reimplemented>=0.1.7,<0.2
