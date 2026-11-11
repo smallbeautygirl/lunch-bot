@@ -15,7 +15,10 @@ from .claude import ask_claude
 
 GOOD_SHOWN = 3
 BAD_SHOWN = 2
-WORKPLACE_MAX_CHARS = 14
+WORKPLACE_TARGET_CHARS = 16
+# Only a guard against a runaway reply: cutting at the target length left
+# half-words like 「客戶立刻追加需」.
+WORKPLACE_HARD_LIMIT = 40
 # lunar-python answers in simplified Chinese.
 TO_TAIWAN = OpenCC("s2tw")
 
@@ -55,9 +58,11 @@ def _prompt(almanac: Almanac, workplace_context: str) -> str:
             "幫農民曆的宜忌寫「職場版」翻譯，用台灣繁體中文，要好笑。",
             workplace_context,
             f"今天宜：{'、'.join(almanac.good)}；忌：{'、'.join(almanac.bad)}。",
-            f"每個詞（{terms}）各寫一個 {WORKPLACE_MAX_CHARS} 字以內的職場對應，"
-            "要跟原本的意思有關聯（例如出行→出差 demo、動土→重構舊程式、"
-            "祭祀→對 GPU 機房拜拜），term 照抄原詞。",
+            f"每個詞（{terms}）各寫一個 {WORKPLACE_TARGET_CHARS} 字以內的職場對應，"
+            "要跟原本的意思有關聯，term 照抄原詞。"
+            "宜的詞寫成今天適合做的工作事（例如出行→出差 demo、開光→新模型上線）；"
+            "忌的詞寫成今天最好別做的工作事（例如動土→重構舊程式、掘井→改正式 DB），"
+            "前面已經有「忌」字，所以不要再寫「別」「不要」。",
         ]
     )
 
@@ -70,9 +75,10 @@ def translate_almanac(almanac: Almanac, workplace_context: str) -> dict[str, str
         return {}
     wanted = {*almanac.good, *almanac.bad}
     return {
-        reading.term: reading.workplace[:WORKPLACE_MAX_CHARS]
+        reading.term: reading.workplace.strip()
         for reading in result.readings
-        if reading.term in wanted and reading.workplace.strip()
+        if reading.term in wanted
+        and 0 < len(reading.workplace.strip()) <= WORKPLACE_HARD_LIMIT
     }
 
 
