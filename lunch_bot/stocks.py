@@ -30,6 +30,8 @@ OVERSEAS = (
     ("^IXIC", "那斯達克"),
     ("^SOX", "費城半導體"),
     ("TSM", "台積電 ADR"),
+    # Linker Vision's main platform partner; the group follows it anyway.
+    ("NVDA", "NVIDIA"),
 )
 
 

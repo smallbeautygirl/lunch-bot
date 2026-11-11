@@ -16,6 +16,16 @@ FRESHNESS_RULES = (
     "也不要寫咖啡。每個星座寫一個具體、不重複的上班族生活情境，"
     "並配合今天是星期幾（週一收心、週五快放假之類）。"
 )
+# Only what linkervision.com says publicly: this repo and its Actions logs are
+# public, so no customer, project or internal service names belong here.
+WORKPLACE_CONTEXT = (
+    "讀者是 Linker Vision 的同事，做視覺 AI 平台（Linker AI Nexa）："
+    "Mirra 合成資料、DataVerse 模型訓練、Observ 大規模 VLM 部署，"
+    "應用在智慧城市、捷運機場港口等關鍵基礎設施、工廠和數位分身，"
+    "和 NVIDIA 合作很深。情境可以用他們的日常，例如客戶 demo、POC、"
+    "排 GPU 跑訓練、標註資料、模型上線、改需求、改票、出國參展；"
+    "偶爾提到產品名就好，不要每則都提，也不要編造客戶或案子名稱。"
+)
 SOURCE_RULES = (
     "下面是兩位占星師本週對各星座的看法。今日運勢要綜合兩邊的方向，"
     "換成今天的具體情境，不要照抄原句。wealth_stars 必須落在每個星座標示的範圍內。"
@@ -68,6 +78,7 @@ def _build_prompt(
         "lucky_color 是一個幸運色。sign 照抄上面的星座名稱。",
         "各星座的星等要有高有低，不要全部一樣。",
         FRESHNESS_RULES,
+        WORKPLACE_CONTEXT,
         *_source_lines(sources),
     ]
     if market_lines:
