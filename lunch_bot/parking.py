@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import time
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -25,6 +26,10 @@ TOKEN_URL = (
 )
 API_BASE_URL = "https://tdx.transportdata.tw/api/basic/v1/Parking"
 CITY = "Kaohsiung"
+REQUEST_SPACING_SECONDS = 1.5
+DEFAULT_RETRY_SECONDS = 5.0
+MAX_ATTEMPTS = 3
+HTTP_TOO_MANY_REQUESTS = 429
 NEARBY_METERS = 300
 CAR_SPACE_TYPE = 1
 FARE_PATTERN = re.compile(r"(半小時|小時)\s*(\d+)\s*元")
@@ -179,14 +184,28 @@ def _fetch_token(client_id: str, client_secret: str) -> str:
 
 
 def _fetch_list(token: str, path: str, key: str) -> list[dict]:
-    response = requests.get(
-        f"{API_BASE_URL}/{path}/City/{CITY}",
-        params={"$format": "JSON"},
-        headers={"Authorization": f"Bearer {token}"},
-        timeout=HTTP_TIMEOUT_SECONDS,
-    )
+    """TDX's free tier answers 429 to back-to-back calls, so every call is
+    spaced out and a 429 is retried after the wait it asks for."""
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        time.sleep(REQUEST_SPACING_SECONDS)
+        response = requests.get(
+            f"{API_BASE_URL}/{path}/City/{CITY}",
+            params={"$format": "JSON"},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=HTTP_TIMEOUT_SECONDS,
+        )
+        if response.status_code != HTTP_TOO_MANY_REQUESTS or attempt == MAX_ATTEMPTS:
+            break
+        time.sleep(_retry_after_seconds(response))
     response.raise_for_status()
     return response.json()[key]
+
+
+def _retry_after_seconds(response: requests.Response) -> float:
+    try:
+        return float(response.headers.get("Retry-After", DEFAULT_RETRY_SECONDS))
+    except ValueError:
+        return DEFAULT_RETRY_SECONDS
 
 
 def fetch_parking_catalog() -> ParkingCatalog | None:
