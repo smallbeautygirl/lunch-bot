@@ -10,7 +10,9 @@ from .config import CLAUDE_MODEL
 
 logger = logging.getLogger(__name__)
 
-MAX_OUTPUT_TOKENS = 4000
+# Thinking counts against this too; at 4000 the two-source horoscope prompt
+# was cut off mid-JSON about half the time. Billing is per token used.
+MAX_OUTPUT_TOKENS = 16000
 ATTEMPTS = 2
 
 
