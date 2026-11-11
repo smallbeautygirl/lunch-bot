@@ -27,6 +27,13 @@ WORKPLACE_CONTEXT = (
     "公司用 Teams 溝通（不是 Slack）。"
     "偶爾提到產品名就好，不要每則都提，也不要編造客戶或案子名稱。"
 )
+# A concrete prediction that doesn't happen reads as "not accurate"; advice
+# and if-then framing keep the workplace flavour without being falsifiable.
+FRAMING_RULES = (
+    "用建議或「如果……就……」的口吻寫，例如「今天適合開口求援」、"
+    "「如果待辦多到像同時追三個 POC，先穩住最關鍵的那個」。"
+    "不要斷言今天一定會發生的具體事件（例如「主管會稱讚你」「GPU 排程會被解開」）。"
+)
 SOURCE_RULES = (
     "下面是兩位占星師本週對各星座的看法。今日運勢要綜合兩邊的方向，"
     "換成今天的具體情境，不要照抄原句。wealth_stars 必須落在每個星座標示的範圍內。"
@@ -80,6 +87,7 @@ def _build_prompt(
         "各星座的星等要有高有低，不要全部一樣。",
         FRESHNESS_RULES,
         WORKPLACE_CONTEXT,
+        FRAMING_RULES,
         *_source_lines(sources),
     ]
     if market_lines:
