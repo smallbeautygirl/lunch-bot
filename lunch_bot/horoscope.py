@@ -81,7 +81,8 @@ def _build_prompt(
         f"今天是 {day.isoformat()}（星期{WEEKDAY_NAMES[day.weekday()]}），"
         "請用台灣繁體中文、輕鬆幽默的語氣，"
         f"為這些星座各寫一則今日運勢（純屬娛樂）：{'、'.join(sources)}。",
-        "每個星座：overall 是一兩句整體運勢（可以帶到上班族日常），"
+        "每個星座：overall 最多兩句、不超過 60 字："
+        "第一句是帶公司日常的建議，第二句要有幽默或反差（自嘲、誇張、吐槽都可以）。"
         f"wealth_stars 是 {MIN_STARS} 到 {MAX_STARS} 的財運星等，"
         "lucky_color 是一個幸運色。sign 照抄上面的星座名稱。",
         "各星座的星等要有高有低，不要全部一樣。",
