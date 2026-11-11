@@ -10,6 +10,7 @@ from urllib.parse import quote
 from .config import LUNCH_MAP_BASE_URL
 from .content import DailyContent
 from .market import MOOD_LABELS, Mood, StockQuote
+from .parking import NearbyParking, ParkingOption
 from .picker import Candidate
 from .teams import open_url_action, text_block, wrap_card
 from .travel import TravelMode
@@ -32,19 +33,53 @@ def _map_url(shop: dict) -> str:
     return f"https://www.google.com/maps/search/?api=1&query={query}"
 
 
-def _candidate_blocks(index: int, candidate: Candidate) -> list[dict]:
+def _parking_option(option: ParkingOption) -> str:
+    parts = [f"{option.place.name} {option.meters}m"]
+    if option.place.fare:
+        parts.append(option.place.fare)
+    if option.place.free_spaces is not None:
+        free = option.place.free_spaces
+        parts.append(f"剩 {free} 格" if free else "已滿")
+    return " · ".join(parts)
+
+
+def parking_line(parking: NearbyParking) -> str:
+    if parking.lot is None and parking.curb is None:
+        return "🅿️ 附近 300m 內查不到停車場"
+    parts = []
+    if parking.lot:
+        parts.append(_parking_option(parking.lot))
+    if parking.curb:
+        parts.append(f"路邊 {_parking_option(parking.curb)}")
+    return "🅿️ " + "｜".join(parts)
+
+
+def _candidate_blocks(
+    index: int, candidate: Candidate, parking: NearbyParking | None
+) -> list[dict]:
     shop, travel = candidate.shop, candidate.travel
     facts = ["、".join(shop["category"])]
     facts.append("$" * shop["price"] if shop.get("price") else "價位未知")
     if rating := _rating(shop):
         facts.append(f"⭐ {rating}")
     facts.append(f"{TRAVEL_LABELS[travel.mode]} {travel.minutes} 分")
-    return [
+    blocks = [
         text_block(
             f"**{index}. {shop['name']}**　[地圖]({_map_url(shop)})", spacing="Medium"
         ),
         text_block(" · ".join(facts), isSubtle=True, spacing="None"),
     ]
+    if parking and travel.mode is TravelMode.DRIVE:
+        blocks.append(text_block(parking_line(parking), isSubtle=True, spacing="None"))
+    return blocks
+
+
+def _parking_note(as_of: str) -> dict:
+    return text_block(
+        f"🅿️ 剩餘車位是 {as_of} 的即時資料（交通部 TDX），出發時可能不同",
+        isSubtle=True,
+        size="Small",
+    )
 
 
 def _segment(label: str, lines: list[str]) -> dict:
@@ -111,6 +146,8 @@ def build_workday_card(
     cached_on: str | None,
     quote: StockQuote | None = None,
     sign_members: list[str] | None = None,
+    parking: dict[str, NearbyParking] | None = None,
+    parking_as_of: str | None = None,
 ) -> dict:
     title = f"🍱 午餐吃什麼？ {day.month}/{day.day}（{WEEKDAY_NAMES[day.weekday()]}）"
     body = [text_block(title, size="Large", weight="Bolder")]
@@ -121,8 +158,14 @@ def build_workday_card(
         )
     if quote:
         body.append(text_block(market_line(quote)))
+    parking = parking or {}
     for index, candidate in enumerate(picks, start=1):
-        body += _candidate_blocks(index, candidate)
+        body += _candidate_blocks(index, candidate, parking.get(candidate.shop["id"]))
+    if parking_as_of and any(
+        pick.travel.mode is TravelMode.DRIVE and pick.shop["id"] in parking
+        for pick in picks
+    ):
+        body.append(_parking_note(parking_as_of))
     if not picks:
         body.append(text_block("今天找不到符合條件的店，請午餐長自由發揮 🙏"))
     if cached_on:

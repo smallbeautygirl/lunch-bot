@@ -58,6 +58,8 @@ jobs:
           LUNCH_CHIEF_EMAIL: ${{ secrets.LUNCH_CHIEF_EMAIL }}
           LUNCH_CHIEF_NAME: ${{ vars.LUNCH_CHIEF_NAME }}
           GROUP_MEMBERS: ${{ secrets.GROUP_MEMBERS }}
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
         run: |
           # The real post is a dispatch with post_for_real (the crontab or a
           # manual catch-up). Any other dispatch that posts is
