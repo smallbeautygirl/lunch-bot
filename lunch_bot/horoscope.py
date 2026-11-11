@@ -30,10 +30,8 @@ WORKPLACE_CONTEXT = (
 # A concrete prediction that doesn't happen reads as "not accurate"; advice
 # and if-then framing keep the workplace flavour without being falsifiable.
 FRAMING_RULES = (
-    "用建議或「如果……就……」的口吻寫，例如「今天適合開口求援」、"
-    "「如果待辦多到像同時追三個 POC，先穩住最關鍵的那個」。"
-    "（例子只示範口吻，不要照抄。）"
-    "不要斷言今天一定會發生的具體事件（例如「主管會稱讚你」「GPU 排程會被解開」）。"
+    "用建議或「如果……就……」的口吻寫（今天適合……、如果遇到……就……），"
+    "不要斷言今天一定會發生的具體事件（例如「主管會稱讚你」）。"
 )
 SOURCE_RULES = (
     "下面是兩位占星師本週對各星座的看法。今日運勢要綜合兩邊的方向，"
