@@ -29,7 +29,8 @@ on:
         default: false
 
 permissions:
-  contents: read
+  # Writes data/morning_posts.json: same-day dedupe and the watchdog read it.
+  contents: write
 
 concurrency:
   group: morning-bot
@@ -67,3 +68,14 @@ jobs:
           else
             python -m lunch_bot.morning --not-after 10:30
           fi
+      - name: Record the morning post
+        if: ${{ inputs.post_for_real && !inputs.dry_run }}
+        run: |
+          git config user.name "lunch-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          [ -f data/morning_posts.json ] || exit 0
+          git add data/morning_posts.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: 🔧 record morning post $(TZ=Asia/Taipei date +%F)"
+          git pull --rebase
+          git push

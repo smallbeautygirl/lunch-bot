@@ -13,6 +13,7 @@ HTTP_TIMEOUT_SECONDS = 15
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 SHOPS_CACHE_PATH = DATA_DIR / "shops_cache.json"
 HISTORY_PATH = DATA_DIR / "history.json"
+MORNING_POSTS_PATH = DATA_DIR / "morning_posts.json"
 
 CANDIDATE_COUNT = 3
 FORTUNE_PICK_COUNT = 2

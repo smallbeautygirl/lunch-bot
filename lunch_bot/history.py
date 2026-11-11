@@ -32,3 +32,16 @@ def save_suggestion(path: Path, today: date, shop_ids: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     kept = history[-HISTORY_ENTRIES_KEPT:]
     path.write_text(json.dumps(kept, ensure_ascii=False, indent=1))
+
+
+def load_post_days(path: Path) -> list[str]:
+    return json.loads(path.read_text()) if path.exists() else []
+
+
+def record_post_day(path: Path, today: date) -> None:
+    """The morning card keeps no suggestions, only the days it went out: enough
+    to stop a second real post the same day and for the watchdog to check."""
+    days = [day for day in load_post_days(path) if day != today.isoformat()]
+    days.append(today.isoformat())
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(days[-HISTORY_ENTRIES_KEPT:], indent=1))

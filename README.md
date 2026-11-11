@@ -58,3 +58,9 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 ```
 
 台灣假日資料來自 [ruyut/TaiwanCalendar](https://github.com/ruyut/TaiwanCalendar)（政府行政機關辦公日曆）。
+
+## 監控
+
+- `watchdog.yml` 每天台北 11:50 檢查：上班日的早安卡（`data/morning_posts.json`）和午餐卡（`data/history.json`）有沒有發出。沒發就讓這次執行失敗，GitHub 會寄信給 repo 擁有者；不會發到群組。它跑在 GitHub 的排程上，不依賴觸發發卡的那台開發機（排程可能晚到，對提醒來說沒關係）。
+- 早安卡和午餐卡同一天正式發過就不會再發（crontab 和手動補發撞在一起時）。
+- `tests.yml` 在每次 push 跑 ruff 和 pytest。

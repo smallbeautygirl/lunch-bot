@@ -10,7 +10,8 @@ import logging
 from datetime import date, datetime
 
 from .calendar_tw import DayKind, classify_day, fetch_holiday_flags
-from .config import TAIPEI
+from .config import MORNING_POSTS_PATH, TAIPEI
+from .history import load_post_days, record_post_day
 from .horoscope import generate_horoscope
 from .mafalda import fetch_mafalda_reading
 from .morning_card import HoroscopeContext, build_morning_card, stock_line
@@ -61,12 +62,19 @@ def run() -> None:
     # Holidays and weekends repeat the last trading day's market; skip them.
     if kind is not DayKind.WORKDAY:
         return
+    is_real_post = not (args.test or args.dry_run)
+    if is_real_post and day.isoformat() in load_post_days(MORNING_POSTS_PATH):
+        # The crontab and a manual catch-up can both fire on the same day.
+        logger.info("Already posted today, skipping")
+        return
     deliver(
         build_morning_payload(day),
         dry_run=args.dry_run,
         is_test=args.test,
         note=args.note,
     )
+    if is_real_post:
+        record_post_day(MORNING_POSTS_PATH, day)
 
 
 if __name__ == "__main__":

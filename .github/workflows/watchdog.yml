@@ -1,0 +1,25 @@
+name: Watchdog
+
+# Fails (so GitHub emails the owner) when a workday's cards did not go out.
+# 03:50 UTC = 11:50 Taipei, after the lunch card's 11:45 deadline. GitHub's
+# schedule can run hours late, which is fine for an alert, and it does not
+# depend on the dev machine whose crontab posts the cards.
+on:
+  schedule:
+    - cron: "50 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m lunch_bot.watchdog
