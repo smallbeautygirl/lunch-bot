@@ -15,6 +15,10 @@ on:
         description: "Post as the real daily card, not [測試中] (external scheduler / catch-up)"
         type: boolean
         default: false
+      catch_up:
+        description: "Manual catch-up: post for real even past the deadline"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -58,6 +62,8 @@ jobs:
             python -m lunch_bot.main --dry-run --test
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.post_for_real }}" != "true" ]; then
             python -m lunch_bot.main --test
+          elif [ "${{ inputs.catch_up }}" = "true" ]; then
+            python -m lunch_bot.main
           else
             python -m lunch_bot.main --not-after 11:45
           fi
