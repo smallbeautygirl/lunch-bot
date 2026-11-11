@@ -1,7 +1,8 @@
 name: Lunch bot
 
 on:
-  # Triggered by cron-job.org at 10:50 Asia/Taipei through the dispatch API
+  # Triggered at 10:50 Asia/Taipei by a crontab on the owner's dev machine
+  # running `gh workflow run`
   # (post_for_real=true). GitHub's own schedule ran 6+ hours late on
   # 2026-11-07..09, so it is not used. Weekends/holidays are skipped in code.
   workflow_dispatch:
@@ -49,7 +50,7 @@ jobs:
           LUNCH_CHIEF_NAME: ${{ vars.LUNCH_CHIEF_NAME }}
           GROUP_MEMBERS: ${{ secrets.GROUP_MEMBERS }}
         run: |
-          # The real post is a dispatch with post_for_real (cron-job.org or a
+          # The real post is a dispatch with post_for_real (the crontab or a
           # manual catch-up). Any other dispatch that posts is
           # marked [測試中]. Real posts are skipped past 11:45: GitHub has
           # started runs 6+ hours late.
