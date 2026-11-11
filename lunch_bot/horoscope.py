@@ -14,7 +14,7 @@ OPENING_MAX_CHARS = 150
 # Without these bans every 牡羊 day read "impulsive, third coffee".
 FRESHNESS_RULES = (
     "不要用星座刻板印象當梗（例如牡羊衝動、處女龜毛、天蠍記仇、雙子善變），"
-    "也不要寫咖啡。每個星座寫一個具體、不重複的上班族生活情境，"
+    "也不要寫咖啡。每個星座的角度都要不一樣，"
     "並配合今天是星期幾（週一收心、週五快放假之類）。"
 )
 # Only what linkervision.com says publicly: this repo and its Actions logs are
@@ -24,7 +24,7 @@ WORKPLACE_CONTEXT = (
     "Mirra 合成資料、DataVerse 模型訓練、Observ 大規模 VLM 部署，"
     "應用在智慧城市、捷運機場港口等關鍵基礎設施、工廠和數位分身，"
     "和 NVIDIA 合作很深。群組裡有 BD、PM、FAE、RD、DevOps 和 RD 主管，"
-    "情境要用他們各自的日常，不要每個人都寫成在跑 GPU。"
+    "內容要貼近他們各自的職位，不要每個人都寫成在跑 GPU。"
     "公司用 Teams 溝通（不是 Slack）。"
     "偶爾提到產品名就好，不要每則都提，也不要編造客戶或案子名稱。"
 )
@@ -36,7 +36,7 @@ FRAMING_RULES = (
 )
 SOURCE_RULES = (
     "下面是兩位占星師本週對各星座的看法。今日運勢要綜合兩邊的方向，"
-    "換成今天的具體情境，不要照抄原句。wealth_stars 必須落在每個星座標示的範圍內。"
+    "寫成今天的建議，不要照抄原句。wealth_stars 必須落在每個星座標示的範圍內。"
     "標示「兩派衝突」的星座，conflict_note 用 30 字以內的一句話點出兩邊說法哪裡不同，"
     "再給一個今天的折衷建議；其他星座 conflict_note 留空。"
 )

@@ -13,17 +13,23 @@ from collections import Counter
 
 logger = logging.getLogger(__name__)
 
+# Core themes, not concrete events: "check the quote's units" misses on any
+# day without a quote, while "what the client really cares about" fits every
+# BD every day and still reads as theirs.
 ROLE_SCENES = (
-    "各角色的日常（寫運勢時依該星座成員的角色挑情境）："
-    "BD：拜訪客戶、報價、追合約、應酬；海外 BD 還有時差視訊、出國參展。"
-    "PM：排需求優先序、開會對齊、寫規格、改 Azure Boards 的票。"
-    "FAE：到客戶現場架設、demo、教育訓練、處理現場突發狀況。"
-    "RD：寫程式、訓練模型、debug、code review、上線；模擬組的 RD 做合成資料、"
-    "場景模擬和數位分身（Mirra、Omniverse）。"
-    "DevOps：部署、監控告警、CI/CD、on-call。"
-    "RD 主管：排人力、1 on 1、review、跨部門開會。"
-    "一個星座只有一種角色時就寫那個角色的情境；角色混在一起時，"
-    "寫大家都會遇到的情境，或點名寫給其中一群人（例如「FAE 們今天……」）。"
+    "各職位每天都會碰到的核心課題（寫運勢時依該星座成員的職位挑一個）："
+    "BD：讀懂對方真正在意什麼、關係與時機、耐心等回音；海外 BD 再加上跨文化與時差。"
+    "PM：取捨優先順序、讓不同的人對齊、說不的勇氣。"
+    "FAE：現場的應變、把技術翻成客戶聽得懂的話、在客戶和 RD 之間當橋樑。"
+    "RD：把問題拆小、專注與被打斷、品質和速度的拉扯；模擬組的 RD 再加上"
+    "「模擬和真實世界的落差」。"
+    "DevOps：穩定與變更的平衡、預防勝於救火、被需要時才被想起。"
+    "RD 主管：把人放對位置、替團隊擋事、放手與信任。"
+    "寫法：停在課題的層次，最多用一個職位用語點出是在說誰，"
+    "不要寫具體的物件、工具、數字或事件（例如報價單、分號、告警規則、某個會議），"
+    "讓那個職位的人每天讀都對得上。"
+    "一個星座有多種職位時，挑大家共通的課題（溝通、節奏、優先順序），"
+    "或點名其中一群（例如「FAE 們」）。"
 )
 
 
