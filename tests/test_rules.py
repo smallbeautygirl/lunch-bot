@@ -317,3 +317,21 @@ def test_note_appears_right_under_the_title():
     card = build_holiday_card(day=date(2026, 10, 10), content=DailyContent())
     body = add_note(card, "運勢改參考週報")["attachments"][0]["content"]["body"]
     assert body[1]["text"] == "📣 運勢改參考週報"
+
+
+def test_unparseable_claude_reply_gives_no_content_instead_of_crashing(monkeypatch):
+    from pydantic import BaseModel
+
+    from lunch_bot import claude
+
+    class Reply(BaseModel):
+        text: str
+
+    def cut_off_reply(**_kwargs):
+        Reply.model_validate_json('{"text": "cut')
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    client = claude.anthropic.Anthropic()
+    monkeypatch.setattr(client.messages, "parse", cut_off_reply)
+    monkeypatch.setattr(claude.anthropic, "Anthropic", lambda: client)
+    assert claude.ask_claude("prompt", Reply) is None
