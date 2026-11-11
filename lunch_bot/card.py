@@ -146,15 +146,17 @@ def build_workday_card(
     cached_on: str | None,
     quote: StockQuote | None = None,
     sign_members: list[str] | None = None,
+    sign_label: str = "",
     parking: dict[str, NearbyParking] | None = None,
     parking_as_of: str | None = None,
 ) -> dict:
     title = f"🍱 午餐吃什麼？ {day.month}/{day.day}（{WEEKDAY_NAMES[day.weekday()]}）"
     body = [text_block(title, size="Large", weight="Bolder")]
     if content.fortune:
-        who = f"（{'、'.join(sign_members)}）" if sign_members else ""
+        label = f"（{sign_label}）" if sign_label else ""
+        who = f"　{'、'.join(sign_members)}" if sign_members else ""
         body.append(
-            text_block(f"🔮 **今日幸運星座：{sign}**{who}\n\n{content.fortune}")
+            text_block(f"🔮 **今日幸運星座：{sign}**{label}{who}\n\n{content.fortune}")
         )
     if quote:
         body.append(text_block(market_line(quote)))

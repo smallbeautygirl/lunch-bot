@@ -49,14 +49,7 @@ def _stars(count: int) -> str:
 
 
 def _source_labels(sources: SignSources | None) -> str:
-    if sources is None:
-        return ""
-    labels = []
-    if sources.tang:
-        labels.append(f"唐：{sources.tang.tier}")
-    if sources.mafalda:
-        labels.append(f"瑪法達：{sources.mafalda_tier or '—'}")
-    return f"（{'｜'.join(labels)}）" if labels else ""
+    return f"（{sources.label}）" if sources and sources.label else ""
 
 
 def _fortune_blocks(

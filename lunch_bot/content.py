@@ -8,6 +8,13 @@ from pydantic import BaseModel
 
 from .calendar_tw import DayKind
 from .claude import ask_claude
+from .horoscope import (
+    FRAMING_RULES,
+    FRESHNESS_RULES,
+    WORKPLACE_CONTEXT,
+    source_line,
+)
+from .sign_sources import SignSources
 
 # Haiku's jokes read like translated English puns nobody in the group got,
 # and Chinese homophones are exactly what it gets wrong. Jokes and English
@@ -115,6 +122,31 @@ def extras_for(day: date, kind: DayKind) -> list[ExtraKind]:
     return [WEEKDAY_EXTRAS[day.weekday()]]
 
 
+def _fortune_lines(
+    sign: str, categories: list[str], sources: SignSources | None
+) -> list[str]:
+    """Same voice as the morning card's horoscope, so the lucky sign at lunch
+    reads like the 09:10 one rather than a generic fortune cookie."""
+    lines = [
+        f"為「{sign}」寫今日運勢（純屬娛樂），fortune 最多兩句、不超過 60 字："
+        "第一句是帶公司日常的建議，第二句是午餐建議，要有幽默或反差。"
+        f"從這些店家分類挑 1 到 3 個最符合運勢的填入 favored_categories："
+        f"{'、'.join(categories)}。"
+        "午餐建議只能提到你填入 favored_categories 的分類名稱，"
+        "不要提其他食物，也不要寫「其他」這個分類。",
+        FRESHNESS_RULES,
+        WORKPLACE_CONTEXT,
+        FRAMING_RULES,
+    ]
+    if sources and (sources.tang or sources.mafalda):
+        lines.append(
+            "參考兩位占星師本週對這個星座的看法，綜合兩邊的方向，不要照抄原句"
+            "（標示「兩派衝突」時取折衷）："
+            + source_line(sign, sources, with_stars=False)
+        )
+    return lines
+
+
 def _build_prompt(
     *,
     day: date,
@@ -122,16 +154,11 @@ def _build_prompt(
     categories: list[str],
     extras: list[ExtraKind],
     topic: str,
+    sources: SignSources | None = None,
 ) -> str:
     lines = [f"今天是 {day.isoformat()}，請用台灣繁體中文，語氣輕鬆。"]
     if sign:
-        lines.append(
-            f"為「{sign}」寫一兩句今日運勢（純屬娛樂），並給午餐建議；"
-            f"從這些店家分類挑 1 到 3 個最符合運勢的填入 favored_categories："
-            f"{'、'.join(categories)}。"
-            "運勢裡的午餐建議只能提到你填入 favored_categories 的分類名稱，"
-            "不要提其他食物，也不要寫「其他」這個分類。"
-        )
+        lines += _fortune_lines(sign, categories, sources)
     wanted = {
         ExtraKind.JOKE: JOKE_PROMPT,
         ExtraKind.ENGLISH: ENGLISH_PROMPT.format(topic=topic),
@@ -149,6 +176,7 @@ def generate_content(
     categories: list[str],
     extras: list[ExtraKind],
     rng: random.Random,
+    sources: SignSources | None = None,
 ) -> DailyContent:
     """Never blocks the lunch post: on any API failure it returns empty
     content and the message goes out without the fun parts."""
@@ -159,6 +187,7 @@ def generate_content(
         categories=categories,
         extras=extras,
         topic=topic,
+        sources=sources,
     )
     if WORDPLAY_EXTRAS & set(extras):
         content = ask_claude(prompt, DailyContent, model=WORDPLAY_MODEL, effort="high")

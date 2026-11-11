@@ -29,6 +29,16 @@ class SignSources:
         return self.mafalda.tier if self.mafalda else None
 
     @property
+    def label(self) -> str:
+        """「唐：累的｜瑪法達：普通」, or "" when neither source has the sign."""
+        labels = []
+        if self.tang:
+            labels.append(f"唐：{self.tang.tier}")
+        if self.mafalda:
+            labels.append(f"瑪法達：{self.mafalda_tier or '—'}")
+        return "｜".join(labels)
+
+    @property
     def is_clash(self) -> bool:
         if self.tang is None or self.mafalda_tier is None:
             return False

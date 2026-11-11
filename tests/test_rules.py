@@ -216,9 +216,12 @@ def test_lucky_sign_lists_the_members_born_under_it():
         chief=None,
         cached_on=None,
         sign_members=["amy", "bob"],
+        sign_label="唐：累的｜瑪法達：普通",
     )
     texts = [b["text"] for b in card["attachments"][0]["content"]["body"]]
-    assert any("今日幸運星座：牡羊座**（amy、bob）" in t for t in texts)
+    assert any(
+        "今日幸運星座：牡羊座**（唐：累的｜瑪法達：普通）　amy、bob" in t for t in texts
+    )
 
 
 def test_market_drop_tilts_weighted_pick_towards_cheap_shops():

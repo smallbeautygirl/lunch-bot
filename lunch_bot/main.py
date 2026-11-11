@@ -17,8 +17,10 @@ from .config import HISTORY_PATH, TAIPEI, read_lunch_chief
 from .content import extras_for, generate_content
 from .history import has_posted_on, load_history, recent_shop_ids, save_suggestion
 from .lunch_map import load_lunch_map
+from .mafalda import fetch_mafalda_reading
 from .parking import fetch_parking_catalog
 from .picker import find_candidates, pick_suggestions
+from .sign_sources import collect_sources
 from .stocks import TAIEX, fetch_stock
 from .teams import (
     configure_logging,
@@ -26,6 +28,7 @@ from .teams import (
     is_past_deadline,
     parse_cli_args,
 )
+from .weekly_reading import fetch_weekly_reading
 from .zodiac import ZODIAC_SIGNS, read_group_members
 
 logger = logging.getLogger(__name__)
@@ -46,12 +49,16 @@ def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str
     # Draw from the group's own signs so the lucky sign is somebody's.
     members = read_group_members()
     sign = rng.choice(list(members) or ZODIAC_SIGNS)
+    sources = collect_sources(
+        [sign], fetch_weekly_reading(day), fetch_mafalda_reading(day, [sign])
+    )[sign]
     content = generate_content(
         day=day,
         sign=sign,
         categories=categories,
         extras=extras_for(day, DayKind.WORKDAY),
         rng=rng,
+        sources=sources,
     )
     picks = pick_suggestions(candidates, set(content.favored_categories), rng, quote)
     catalog = fetch_parking_catalog()
@@ -67,6 +74,7 @@ def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str
         cached_on=lunch_map.cached_on,
         quote=quote,
         sign_members=members.get(sign),
+        sign_label=sources.label,
         parking=parking,
         parking_as_of=catalog.as_of if catalog else None,
     )

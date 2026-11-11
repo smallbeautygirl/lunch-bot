@@ -54,15 +54,16 @@ class Horoscope(BaseModel):
     fortunes: list[SignFortune]
 
 
-def _source_line(sign: str, sources: SignSources) -> str:
+def source_line(sign: str, sources: SignSources, *, with_stars: bool = True) -> str:
     parts = [sign]
     if sources.tang:
         parts.append(f"唐綺陽【{sources.tang.tier}】{sources.tang.note}")
     if sources.mafalda:
         tier = f"【{sources.mafalda_tier}】" if sources.mafalda_tier else ""
         parts.append(f"瑪法達{tier}{sources.mafalda.opening[:OPENING_MAX_CHARS]}")
-    low, high = sources.star_range
-    parts.append(f"財運 {low}–{high} 顆")
+    if with_stars:
+        low, high = sources.star_range
+        parts.append(f"財運 {low}–{high} 顆")
     if sources.is_clash:
         parts.append("⚠️兩派衝突")
     return "｜".join(parts)
@@ -71,7 +72,7 @@ def _source_line(sign: str, sources: SignSources) -> str:
 def _source_lines(sources: dict[str, SignSources]) -> list[str]:
     if not any(s.tang or s.mafalda for s in sources.values()):
         return []
-    return [SOURCE_RULES, *(_source_line(sign, s) for sign, s in sources.items())]
+    return [SOURCE_RULES, *(source_line(sign, s) for sign, s in sources.items())]
 
 
 def _build_prompt(
