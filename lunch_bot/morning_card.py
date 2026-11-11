@@ -59,7 +59,10 @@ def _fortune_blocks(
     heading += _source_labels(sources)
     if names:
         heading += f"　{'、'.join(names)}"
-    facts = f"財運 {_stars(fortune.wealth_stars)} · 幸運色：{fortune.lucky_color}"
+    wealth = f"財運 {_stars(fortune.wealth_stars)}"
+    if fortune.wealth_note:
+        wealth += f"　{fortune.wealth_note}"
+    facts = f"{wealth} · 幸運色：{fortune.lucky_color}"
     blocks = [
         text_block(heading, spacing="Medium"),
         text_block(fortune.overall, spacing="None"),

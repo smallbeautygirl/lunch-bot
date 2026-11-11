@@ -150,3 +150,22 @@ def test_run_on_time_or_without_deadline_posts():
     on_time = datetime(2026, 11, 9, 9, 27)
     assert not is_past_deadline(time(10, 30), on_time)
     assert not is_past_deadline(None, on_time)
+
+
+def test_wealth_note_sits_next_to_the_stars():
+    lucky = SignFortune(
+        sign="牡羊座",
+        overall="…",
+        wealth_stars=3,
+        lucky_color="紅",
+        wealth_note="小額進帳，衝動下單先緩緩",
+    )
+    card = build_morning_card(
+        day=MONDAY,
+        taiex=None,
+        overseas=[],
+        fortunes=[lucky],
+        context=HoroscopeContext(),
+    )
+    texts = "\n".join(card_texts(card))
+    assert "財運 ★★★☆☆　小額進帳，衝動下單先緩緩 · 幸運色：紅" in texts

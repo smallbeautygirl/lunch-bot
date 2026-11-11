@@ -47,6 +47,7 @@ class SignFortune(BaseModel):
     overall: str
     wealth_stars: int
     lucky_color: str
+    wealth_note: str = ""
     conflict_note: str = ""
 
 
@@ -98,6 +99,8 @@ def _build_prompt(
         "第一句是一般的星座運勢（心情、人際、感情、健康或整體運，參考占星師的看法），"
         "第二句才帶到工作，配合職位，要有幽默或反差（自嘲、誇張、吐槽都可以）。"
         f"wealth_stars 是 {MIN_STARS} 到 {MAX_STARS} 的財運星等，"
+        "wealth_note 是 15 字以內的財運短評，要跟星等一致，可以拿今天股市開玩笑，"
+        "但不能叫人買、賣或推薦任何標的。"
         "lucky_color 是一個幸運色。sign 照抄上面的星座名稱。",
         "各星座的星等要有高有低，不要全部一樣。",
         FRESHNESS_RULES,
