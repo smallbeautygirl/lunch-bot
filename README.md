@@ -46,7 +46,7 @@
 3. **GitHub Variables**（選填）：`LUNCH_CHIEF_NAME`，卡片上 tag 顯示的名字，預設「午餐長」。
 4. 到 Actions → Lunch bot（或 Morning horoscope）→ Run workflow，勾著 `dry_run` 跑一次，在 log 裡看卡片內容。取消勾選再跑一次，就會真的發到群組。
 
-排程由維護者開發機上的 crontab 負責：每天台北 09:10、10:50（UTC `10 1`、`50 2`）各跑一次 `gh workflow run <morning|lunch>.yml --ref main -f dry_run=false -f post_for_real=true`。GitHub 自己的 `schedule` 在 2026-11-07～09 連續晚了 6 小時以上才跑，所以不用。機器關機那天就不會發，需要時到 Actions 手動 Run workflow（取消 `dry_run`、勾 `post_for_real`）補發。週末、假日由程式自己跳過；開跑太晚（早安卡過 10:30、午餐卡過 11:45）也會跳過不發。
+排程由維護者開發機上的 systemd 使用者計時器負責（`~/.config/systemd/user/lunch-bot-{morning,lunch,watchdog}.timer`，台北 09:10、10:50、11:55，帳號開了 lingering 所以登出也會跑）：各執行一次 `gh workflow run <morning|lunch>.yml --ref main -f dry_run=false -f post_for_real=true`。不用 crontab，因為那台機器的 cron 不會執行 LDAP 帳號的 crontab（2026-11-11 設了卻一次都沒跑）。GitHub 自己的 `schedule` 在 2026-11-07～09 連續晚了 6 小時以上，所以也不用。機器關機時錯過的那次開機後會補跑，太晚的由截止時間擋下；需要時到 Actions 手動 Run workflow（取消 `dry_run`、勾 `post_for_real`，過了截止時間再勾 `catch_up`）補發。週末、假日由程式自己跳過；同一天已正式發過也會跳過。
 
 ## 本機開發
 
@@ -61,6 +61,6 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 
 ## 監控
 
-- `watchdog.yml` 每天台北 11:50 檢查：上班日的早安卡（`data/morning_posts.json`）和午餐卡（`data/history.json`）有沒有發出。沒發就讓這次執行失敗，GitHub 會寄信給 repo 擁有者；不會發到群組。它跑在 GitHub 的排程上，不依賴觸發發卡的那台開發機（排程可能晚到，對提醒來說沒關係）。
+- `watchdog.yml` 每天台北 11:50 檢查：上班日的早安卡（`data/morning_posts.json`）和午餐卡（`data/history.json`）有沒有發出。沒發就讓這次執行失敗，GitHub 會寄信給 repo 擁有者；不會發到群組。它跑在 GitHub 的排程上（另外開發機的計時器在 11:55 也會觸發一次），不依賴觸發發卡的那台開發機（排程可能晚到，對提醒來說沒關係）。
 - 早安卡和午餐卡同一天正式發過就不會再發（crontab 和手動補發撞在一起時）。
 - `tests.yml` 在每次 push 跑 ruff 和 pytest。
