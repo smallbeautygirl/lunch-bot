@@ -3,7 +3,7 @@ name: Watchdog
 # Fails (so GitHub emails the owner) when a workday's cards did not go out.
 # 03:50 UTC = 11:50 Taipei, after the lunch card's 11:45 deadline. GitHub's
 # schedule can run hours late, which is fine for an alert, and it does not
-# depend on the dev machine whose crontab posts the cards.
+# depend on the dev machine whose systemd timers post the cards.
 on:
   schedule:
     - cron: "50 3 * * *"
