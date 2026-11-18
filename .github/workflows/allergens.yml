@@ -6,11 +6,6 @@ on:
   schedule:
     - cron: "0 20 * * 0"
   workflow_dispatch:
-  # A workflow can only be dispatched once it is on main; this starts the
-  # first run from the branch that adds it.
-  push:
-    branches: [feat/allergens]
-    paths: [.github/workflows/allergens.yml]
 
 permissions:
   contents: write
