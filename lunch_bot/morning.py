@@ -12,6 +12,7 @@ from datetime import date, datetime
 from .almanac import almanac_lines, compute_almanac, translate_almanac
 from .calendar_tw import DayKind, classify_day, fetch_holiday_flags
 from .config import MORNING_POSTS_PATH, TAIPEI
+from .group_recap import fetch_group_recap, recap_lines
 from .history import load_post_days, record_post_day
 from .horoscope import WORKPLACE_CONTEXT, generate_horoscope
 from .mafalda import fetch_mafalda_reading
@@ -31,7 +32,7 @@ from .zodiac import ZODIAC_SIGNS, read_group_members
 logger = logging.getLogger(__name__)
 
 
-def build_morning_payload(day: date) -> dict:
+def build_morning_payload(day: date, *, with_recap: bool = False) -> dict:
     members = read_group_members()
     taiex = fetch_stock(*TAIEX)
     overseas = fetch_overseas()
@@ -51,6 +52,7 @@ def build_morning_payload(day: date) -> dict:
     )
     almanac = compute_almanac(day)
     readings = translate_almanac(almanac, WORKPLACE_CONTEXT)
+    recap = fetch_group_recap(day) if with_recap else None
     return build_morning_card(
         day=day,
         taiex=taiex,
@@ -58,6 +60,7 @@ def build_morning_payload(day: date) -> dict:
         fortunes=fortunes,
         context=context,
         almanac=almanac_lines(almanac, readings),
+        recap=recap_lines(day, recap) if recap else None,
     )
 
 
@@ -78,7 +81,8 @@ def run() -> None:
         logger.info("Already posted today, skipping")
         return
     deliver(
-        build_morning_payload(day),
+        # A dry run prints the card into a public Actions log.
+        build_morning_payload(day, with_recap=not args.dry_run),
         dry_run=args.dry_run,
         is_test=args.test,
         note=args.note,
