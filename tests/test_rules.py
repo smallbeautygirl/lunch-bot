@@ -102,6 +102,18 @@ def test_expensive_delivery_only_and_recent_shops_are_filtered_out():
     assert [c.shop["id"] for c in found] == ["ok"]
 
 
+def test_shops_rated_below_four_stars_are_not_suggested_but_unrated_ones_are():
+    shops = [
+        make_shop("field", "麵", googleRating=4.0),
+        make_shop("note", "飯", note="老店｜Google 4.3★"),
+        make_shop("unrated", "粥", note="巷口小攤"),
+        make_shop("low_field", "鍋", googleRating=3.9),
+        make_shop("low_note", "餃", note="Google 3.6★ (210)"),
+    ]
+    found = find_candidates(shops, [], SETTINGS, day=FRIDAY, excluded=set())
+    assert [c.shop["id"] for c in found] == ["field", "note", "unrated"]
+
+
 def test_recent_ids_cover_last_five_days_excluding_today():
     oldest = {"date": "2026-10-31", "shop_ids": ["too-old"]}
     history = [oldest] + [

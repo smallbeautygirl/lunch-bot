@@ -3,7 +3,6 @@ notifies when it is declared in msteams.entities — plain "@name" text does not
 
 from __future__ import annotations
 
-import re
 from datetime import date
 from urllib.parse import quote
 
@@ -12,20 +11,13 @@ from .content import DailyContent
 from .market import MOOD_LABELS, Mood, StockQuote
 from .parking import NearbyParking, ParkingOption
 from .picker import Candidate
+from .ratings import google_rating
 from .teams import open_url_action, text_block, wrap_card
 from .travel import TravelMode
 
 WEEKDAY_NAMES = "一二三四五六日"
-RATING_IN_NOTE = re.compile(r"Google ([\d.]+)★")
 MOOD_RULES = {Mood.UP: "，只推 $$ 以上", Mood.FLAT: "", Mood.DOWN: "，只推 $ 平價"}
 TRAVEL_LABELS = {TravelMode.WALK: "🚶 走路", TravelMode.DRIVE: "🚗 開車"}
-
-
-def _rating(shop: dict) -> str | None:
-    if shop.get("googleRating"):
-        return str(shop["googleRating"])
-    match = RATING_IN_NOTE.search(shop.get("note") or "")
-    return match.group(1) if match else None
 
 
 def _map_url(shop: dict) -> str:
@@ -60,7 +52,7 @@ def _candidate_blocks(
     shop, travel = candidate.shop, candidate.travel
     facts = ["、".join(shop["category"])]
     facts.append("$" * shop["price"] if shop.get("price") else "價位未知")
-    if rating := _rating(shop):
+    if (rating := google_rating(shop)) is not None:
         facts.append(f"⭐ {rating}")
     facts.append(f"{TRAVEL_LABELS[travel.mode]} {travel.minutes} 分")
     blocks = [

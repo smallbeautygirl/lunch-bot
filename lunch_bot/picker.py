@@ -6,6 +6,7 @@ from datetime import date
 
 from .config import CANDIDATE_COUNT, FORTUNE_PICK_COUNT, FORTUNE_WEIGHT, MAX_PRICE_BAND
 from .market import StockQuote, fits_market, market_factor
+from .ratings import is_rated_well_enough
 from .travel import Travel, estimate_travel
 
 WEEKDAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -44,6 +45,7 @@ def _is_eligible(shop: dict, day: date, depart: str, excluded: set[str]) -> bool
         and not shop.get("needsReview")
         and bool(EAT_IN_SERVICES & set(shop.get("service") or []))
         and (price is None or price <= MAX_PRICE_BAND)
+        and is_rated_well_enough(shop)
         and is_open_at(shop, day, depart)
     )
 
