@@ -1,6 +1,6 @@
 """昨日群組回顧 for the morning card. It is written in a private repo (see
 docs/adr/0001) and only read here: this repo and its logs are public, so the
-text is never logged, and dry runs, which print the card, do not fetch it."""
+text is never logged, and dry runs, which print the card, leave it out."""
 
 from __future__ import annotations
 
@@ -45,6 +45,7 @@ def fetch_group_recap(day: date) -> str | None:
     except (requests.RequestException, ValueError):
         logger.warning("Group recap unavailable")
         return None
+    logger.info("Group recap fetched: has text %s", bool(saved.get("recap")))
     if saved.get("date") != day.isoformat():
         logger.warning("Group recap is not for today")
         return None

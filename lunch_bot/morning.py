@@ -52,7 +52,8 @@ def build_morning_payload(day: date, *, with_recap: bool = False) -> dict:
     )
     almanac = compute_almanac(day)
     readings = translate_almanac(almanac, WORKPLACE_CONTEXT)
-    recap = fetch_group_recap(day) if with_recap else None
+    # Fetched even when left out, so a dry run still shows the token works.
+    recap = fetch_group_recap(day)
     return build_morning_card(
         day=day,
         taiex=taiex,
@@ -60,7 +61,7 @@ def build_morning_payload(day: date, *, with_recap: bool = False) -> dict:
         fortunes=fortunes,
         context=context,
         almanac=almanac_lines(almanac, readings),
-        recap=recap_lines(day, recap) if recap else None,
+        recap=recap_lines(day, recap) if recap and with_recap else None,
     )
 
 
