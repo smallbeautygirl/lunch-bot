@@ -11,6 +11,12 @@ import logging
 import random
 from datetime import date, datetime
 
+from .allergens import (
+    ensure_safe_pick,
+    load_shop_allergens,
+    read_member_allergens,
+    warnings_for,
+)
 from .calendar_tw import DayKind, classify_day, fetch_holiday_flags
 from .card import build_holiday_card, build_workday_card
 from .config import HISTORY_PATH, TAIPEI, read_lunch_chief
@@ -62,6 +68,9 @@ def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str
         mood=quote.mood if quote else None,
     )
     picks = pick_suggestions(candidates, set(content.favored_categories), rng, quote)
+    allergic = read_member_allergens()
+    guesses = load_shop_allergens()
+    picks = ensure_safe_pick(picks, candidates, guesses, allergic, rng)
     catalog = fetch_parking_catalog()
     parking = (
         {pick.shop["id"]: catalog.near(pick.shop) for pick in picks} if catalog else {}
@@ -78,6 +87,10 @@ def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str
         sign_label=sources.label,
         parking=parking,
         parking_as_of=catalog.as_of if catalog else None,
+        allergen_warnings={
+            pick.shop["id"]: warnings_for(pick.shop["id"], guesses, allergic)
+            for pick in picks
+        },
     )
     return card, [pick.shop["id"] for pick in picks]
 

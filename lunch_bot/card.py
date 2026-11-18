@@ -6,6 +6,7 @@ from __future__ import annotations
 from datetime import date
 from urllib.parse import quote
 
+from .allergens import DISCLAIMER as ALLERGEN_DISCLAIMER
 from .config import LUNCH_MAP_BASE_URL
 from .content import DailyContent
 from .market import MOOD_LABELS, Mood, StockQuote
@@ -47,7 +48,10 @@ def parking_line(parking: NearbyParking) -> str:
 
 
 def _candidate_blocks(
-    index: int, candidate: Candidate, parking: NearbyParking | None
+    index: int,
+    candidate: Candidate,
+    parking: NearbyParking | None,
+    warnings: list[str],
 ) -> list[dict]:
     shop, travel = candidate.shop, candidate.travel
     facts = ["、".join(shop["category"])]
@@ -63,6 +67,7 @@ def _candidate_blocks(
     ]
     if parking and travel.mode is TravelMode.DRIVE:
         blocks.append(text_block(parking_line(parking), isSubtle=True, spacing="None"))
+    blocks += [text_block(line, isSubtle=True, spacing="None") for line in warnings]
     return blocks
 
 
@@ -141,6 +146,7 @@ def build_workday_card(
     sign_label: str = "",
     parking: dict[str, NearbyParking] | None = None,
     parking_as_of: str | None = None,
+    allergen_warnings: dict[str, list[str]] | None = None,
 ) -> dict:
     title = f"🍱 午餐吃什麼？ {day.month}/{day.day}（{WEEKDAY_NAMES[day.weekday()]}）"
     body = [text_block(title, size="Large", weight="Bolder")]
@@ -153,8 +159,14 @@ def build_workday_card(
     if quote:
         body.append(text_block(market_line(quote)))
     parking = parking or {}
+    warnings = allergen_warnings or {}
     for index, candidate in enumerate(picks, start=1):
-        body += _candidate_blocks(index, candidate, parking.get(candidate.shop["id"]))
+        shop_id = candidate.shop["id"]
+        body += _candidate_blocks(
+            index, candidate, parking.get(shop_id), warnings.get(shop_id, [])
+        )
+    if any(warnings.get(pick.shop["id"]) for pick in picks):
+        body.append(text_block(ALLERGEN_DISCLAIMER, isSubtle=True, size="Small"))
     if parking_as_of and any(
         pick.travel.mode is TravelMode.DRIVE and pick.shop["id"] in parking
         for pick in picks
