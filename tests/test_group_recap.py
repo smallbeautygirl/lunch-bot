@@ -31,23 +31,23 @@ def serve(monkeypatch, saved: dict) -> None:
 
 def test_todays_recap_is_returned(monkeypatch):
     serve(monkeypatch, {"date": "2026-11-24", "recap": "大家聊了拉麵。"})
-    assert fetch_group_recap(TUESDAY) == "大家聊了拉麵。"
+    assert fetch_group_recap(TUESDAY) == ["💬 **昨日群組回顧**", "大家聊了拉麵。"]
 
 
 def test_recap_written_for_another_day_is_not_shown(monkeypatch):
     serve(monkeypatch, {"date": "2026-11-23", "recap": "舊的回顧"})
-    assert fetch_group_recap(TUESDAY) is None
+    assert fetch_group_recap(TUESDAY) == []
 
 
 def test_quiet_day_has_no_recap(monkeypatch):
     serve(monkeypatch, {"date": "2026-11-24", "recap": ""})
-    assert fetch_group_recap(TUESDAY) is None
+    assert fetch_group_recap(TUESDAY) == []
 
 
 def test_without_a_token_nothing_is_fetched(monkeypatch):
     monkeypatch.delenv("PRIVATE_REPO_TOKEN", raising=False)
     monkeypatch.setattr(requests, "get", lambda *_, **__: 1 / 0)
-    assert fetch_group_recap(TUESDAY) is None
+    assert fetch_group_recap(TUESDAY) == []
 
 
 def test_unreachable_private_repo_gives_no_recap(monkeypatch):
@@ -56,7 +56,7 @@ def test_unreachable_private_repo_gives_no_recap(monkeypatch):
 
     monkeypatch.setenv("PRIVATE_REPO_TOKEN", "token")
     monkeypatch.setattr(group_recap.requests, "get", fail)
-    assert fetch_group_recap(TUESDAY) is None
+    assert fetch_group_recap(TUESDAY) == []
 
 
 def test_mondays_recap_is_titled_for_the_weekend():
@@ -75,3 +75,9 @@ def test_morning_card_shows_the_recap_when_there_is_one():
         recap=recap_lines(TUESDAY, "大家聊了拉麵。"),
     )
     assert "昨日群組回顧**\\n\\n大家聊了拉麵。" in json.dumps(card, ensure_ascii=False)
+
+
+def test_board_follows_the_recap_and_shows_alone_on_a_quiet_day(monkeypatch):
+    board = {"title": "群組觀察（預覽）", "lines": ["🗣️ 話最多：小安"]}
+    serve(monkeypatch, {"date": "2026-11-24", "recap": "", "board": board})
+    assert fetch_group_recap(TUESDAY) == ["🏆 **群組觀察（預覽）**", "🗣️ 話最多：小安"]

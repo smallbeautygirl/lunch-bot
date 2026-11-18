@@ -25,12 +25,12 @@ def recap_title(day: date) -> str:
     return "上週五到週末的群組回顧" if day.weekday() == MONDAY else "昨日群組回顧"
 
 
-def fetch_group_recap(day: date) -> str | None:
-    """None without a token, when the private repo is unreachable, or when
-    the recap there was not written for this day."""
+def fetch_group_recap(day: date) -> list[str]:
+    """Card paragraphs for the recap and the board; [] without a token, when
+    the private repo is unreachable, or when what is there is not for this day."""
     token = os.getenv("PRIVATE_REPO_TOKEN", "").strip()
     if not token:
-        return None
+        return []
     try:
         response = requests.get(
             RECAP_URL,
@@ -44,13 +44,24 @@ def fetch_group_recap(day: date) -> str | None:
         saved = response.json()
     except (requests.RequestException, ValueError):
         logger.warning("Group recap unavailable")
-        return None
-    logger.info("Group recap fetched: has text %s", bool(saved.get("recap")))
+        return []
+    board = saved.get("board") or {}
+    logger.info(
+        "Group recap fetched: has text %s, board lines %d",
+        bool(saved.get("recap")),
+        len(board.get("lines") or []),
+    )
     if saved.get("date") != day.isoformat():
         logger.warning("Group recap is not for today")
-        return None
-    return saved.get("recap") or None
+        return []
+    return [*recap_lines(day, saved.get("recap") or ""), *board_lines(board)]
 
 
 def recap_lines(day: date, recap: str) -> list[str]:
-    return [f"💬 **{recap_title(day)}**", recap]
+    return [f"💬 **{recap_title(day)}**", recap] if recap else []
+
+
+def board_lines(board: dict) -> list[str]:
+    lines = [str(line) for line in board.get("lines") or []]
+    title = board.get("title") or "本週群組觀察"
+    return [f"🏆 **{title}**", *lines] if lines else []

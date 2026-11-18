@@ -12,7 +12,7 @@ from datetime import date, datetime
 from .almanac import almanac_lines, compute_almanac, translate_almanac
 from .calendar_tw import DayKind, classify_day, fetch_holiday_flags
 from .config import MORNING_POSTS_PATH, TAIPEI
-from .group_recap import fetch_group_recap, recap_lines
+from .group_recap import fetch_group_recap
 from .history import load_post_days, record_post_day
 from .horoscope import WORKPLACE_CONTEXT, generate_horoscope
 from .mafalda import fetch_mafalda_reading
@@ -61,7 +61,7 @@ def build_morning_payload(day: date, *, with_recap: bool = False) -> dict:
         fortunes=fortunes,
         context=context,
         almanac=almanac_lines(almanac, readings),
-        recap=recap_lines(day, recap) if recap and with_recap else None,
+        recap=recap if with_recap else None,
     )
 
 
