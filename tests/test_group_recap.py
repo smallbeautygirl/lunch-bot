@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from datetime import date
 
 import requests
@@ -31,7 +30,7 @@ def serve(monkeypatch, saved: dict) -> None:
 
 def test_todays_recap_is_returned(monkeypatch):
     serve(monkeypatch, {"date": "2026-11-24", "recap": "大家聊了拉麵。"})
-    assert fetch_group_recap(TUESDAY) == ["💬 **昨日群組回顧**", "大家聊了拉麵。"]
+    assert fetch_group_recap(TUESDAY) == [["💬 **昨日群組回顧**", "大家聊了拉麵。"]]
 
 
 def test_recap_written_for_another_day_is_not_shown(monkeypatch):
@@ -64,20 +63,28 @@ def test_mondays_recap_is_titled_for_the_weekend():
     assert recap_lines(TUESDAY, "x")[0] == "💬 **昨日群組回顧**"
 
 
-def test_morning_card_shows_the_recap_when_there_is_one():
-    context = HoroscopeContext(members={}, sources={}, tang=None, mafalda=None)
+def test_each_group_section_is_its_own_shaded_box_on_the_card():
     card = build_morning_card(
         day=TUESDAY,
         taiex=None,
         overseas=[],
         fortunes=[],
-        context=context,
-        recap=recap_lines(TUESDAY, "大家聊了拉麵。"),
+        context=HoroscopeContext(),
+        group_sections=[["💬 **昨日群組回顧**", "大家聊了拉麵。"], ["🏆 **榜**", "a"]],
     )
-    assert "昨日群組回顧**\\n\\n大家聊了拉麵。" in json.dumps(card, ensure_ascii=False)
+    boxes = [
+        block
+        for block in card["attachments"][0]["content"]["body"]
+        if block.get("style") == "emphasis"
+    ]
+    assert [box["items"][0]["text"] for box in boxes] == [
+        "💬 **昨日群組回顧**",
+        "🏆 **榜**",
+    ]
+    assert boxes[0]["items"][1]["text"] == "大家聊了拉麵。"
 
 
 def test_board_follows_the_recap_and_shows_alone_on_a_quiet_day(monkeypatch):
     board = {"title": "群組觀察（預覽）", "lines": ["🗣️ 話最多：小安"]}
     serve(monkeypatch, {"date": "2026-11-24", "recap": "", "board": board})
-    assert fetch_group_recap(TUESDAY) == ["🏆 **群組觀察（預覽）**", "🗣️ 話最多：小安"]
+    assert fetch_group_recap(TUESDAY) == [["🏆 **群組觀察（預覽）**", "🗣️ 話最多：小安"]]

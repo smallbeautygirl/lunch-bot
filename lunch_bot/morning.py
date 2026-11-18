@@ -9,12 +9,11 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime
 
-from .almanac import almanac_lines, compute_almanac, translate_almanac
 from .calendar_tw import DayKind, classify_day, fetch_holiday_flags
 from .config import MORNING_POSTS_PATH, TAIPEI
 from .group_recap import fetch_group_recap
 from .history import load_post_days, record_post_day
-from .horoscope import WORKPLACE_CONTEXT, generate_horoscope
+from .horoscope import generate_horoscope
 from .mafalda import fetch_mafalda_reading
 from .morning_card import HoroscopeContext, build_morning_card, stock_line
 from .roles import read_member_roles, role_mixes
@@ -47,11 +46,7 @@ def build_morning_payload(day: date, *, with_recap: bool = False) -> dict:
         market_lines=market_lines,
         mixes=role_mixes(members, read_member_roles()),
     )
-    context = HoroscopeContext(
-        members=members, sources=sources, tang=tang, mafalda=mafalda
-    )
-    almanac = compute_almanac(day)
-    readings = translate_almanac(almanac, WORKPLACE_CONTEXT)
+    context = HoroscopeContext(members=members, tang=tang, mafalda=mafalda)
     # Fetched even when left out, so a dry run still shows the token works.
     recap = fetch_group_recap(day)
     return build_morning_card(
@@ -60,8 +55,7 @@ def build_morning_payload(day: date, *, with_recap: bool = False) -> dict:
         overseas=overseas,
         fortunes=fortunes,
         context=context,
-        almanac=almanac_lines(almanac, readings),
-        recap=recap if with_recap else None,
+        group_sections=recap if with_recap else [],
     )
 
 

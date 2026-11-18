@@ -25,9 +25,10 @@ def recap_title(day: date) -> str:
     return "上週五到週末的群組回顧" if day.weekday() == MONDAY else "昨日群組回顧"
 
 
-def fetch_group_recap(day: date) -> list[str]:
-    """Card paragraphs for the recap and the board; [] without a token, when
-    the private repo is unreachable, or when what is there is not for this day."""
+def fetch_group_recap(day: date) -> list[list[str]]:
+    """The recap and the board as card sections (a title, then its lines);
+    [] without a token, when the private repo is unreachable, or when what
+    is there is not for this day."""
     token = os.getenv("PRIVATE_REPO_TOKEN", "").strip()
     if not token:
         return []
@@ -54,7 +55,8 @@ def fetch_group_recap(day: date) -> list[str]:
     if saved.get("date") != day.isoformat():
         logger.warning("Group recap is not for today")
         return []
-    return [*recap_lines(day, saved.get("recap") or ""), *board_lines(board)]
+    sections = [recap_lines(day, saved.get("recap") or ""), board_lines(board)]
+    return [section for section in sections if section]
 
 
 def recap_lines(day: date, recap: str) -> list[str]:

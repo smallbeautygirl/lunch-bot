@@ -19,6 +19,18 @@ def text_block(text: str, **style: object) -> dict:
     return {"type": "TextBlock", "text": text, "wrap": True, **style}
 
 
+def container(items: list[dict], **style: object) -> dict:
+    return {"type": "Container", "items": items, **style}
+
+
+def toggle_action(title: str, target_id: str) -> dict:
+    return {
+        "type": "Action.ToggleVisibility",
+        "title": title,
+        "targetElements": [target_id],
+    }
+
+
 def open_url_action(title: str, url: str) -> dict:
     return {"type": "Action.OpenUrl", "title": title, "url": url}
 
