@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import date
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from lunch_bot.mafalda import (
     parse_standings,
 )
 from lunch_bot.morning_card import HoroscopeContext, build_morning_card
-from lunch_bot.sign_sources import SignSources, collect_sources
+from lunch_bot.sign_sources import SignSources
 from lunch_bot.weekly_reading import SignReading, find_reading
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -103,13 +104,12 @@ def test_tidy_clamps_stars_and_drops_invented_conflicts():
     assert (taurus.wealth_stars, taurus.conflict_note) == (4, "")
 
 
-def test_card_labels_both_sources_shows_the_clash_and_credits_both():
+def test_card_shows_the_clash_without_source_labels_and_credits_both():
     tang = find_reading(TANG_FEED, date(2026, 11, 11))
     mafalda = MafaldaReading(
         week_label="11/11–11/17",
         signs={"牡羊座": MafaldaSign("…", "u", MafaldaTier.TOP)},
     )
-    by_sign = collect_sources(["牡羊座"], tang, mafalda)
     fortune = SignFortune(
         sign="牡羊座",
         overall="…",
@@ -122,9 +122,9 @@ def test_card_labels_both_sources_shows_the_clash_and_credits_both():
         taiex=None,
         overseas=[],
         fortunes=[fortune],
-        context=HoroscopeContext(sources=by_sign, tang=tang, mafalda=mafalda),
+        context=HoroscopeContext(tang=tang, mafalda=mafalda),
     )
-    texts = " ".join(b["text"] for b in card["attachments"][0]["content"]["body"])
-    assert "牡羊座**（唐：累的｜瑪法達：前段班）" in texts
+    texts = json.dumps(card, ensure_ascii=False)
+    assert "牡羊座**（" not in texts
     assert "⚖️ 兩派說法不同：唐老師說累，瑪法達說旺" in texts
     assert tang.url in texts and "瑪法達星座運勢" in texts

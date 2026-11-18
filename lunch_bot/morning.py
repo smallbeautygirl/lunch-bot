@@ -9,11 +9,11 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime
 
-from .almanac import almanac_lines, compute_almanac, translate_almanac
 from .calendar_tw import DayKind, classify_day, fetch_holiday_flags
 from .config import MORNING_POSTS_PATH, TAIPEI
+from .group_recap import fetch_group_recap
 from .history import load_post_days, record_post_day
-from .horoscope import WORKPLACE_CONTEXT, generate_horoscope
+from .horoscope import generate_horoscope
 from .mafalda import fetch_mafalda_reading
 from .morning_card import HoroscopeContext, build_morning_card, stock_line
 from .roles import read_member_roles, role_mixes
@@ -31,7 +31,7 @@ from .zodiac import ZODIAC_SIGNS, read_group_members
 logger = logging.getLogger(__name__)
 
 
-def build_morning_payload(day: date) -> dict:
+def build_morning_payload(day: date, *, with_recap: bool = False) -> dict:
     members = read_group_members()
     taiex = fetch_stock(*TAIEX)
     overseas = fetch_overseas()
@@ -46,18 +46,16 @@ def build_morning_payload(day: date) -> dict:
         market_lines=market_lines,
         mixes=role_mixes(members, read_member_roles()),
     )
-    context = HoroscopeContext(
-        members=members, sources=sources, tang=tang, mafalda=mafalda
-    )
-    almanac = compute_almanac(day)
-    readings = translate_almanac(almanac, WORKPLACE_CONTEXT)
+    context = HoroscopeContext(members=members, tang=tang, mafalda=mafalda)
+    # Fetched even when left out, so a dry run still shows the token works.
+    recap = fetch_group_recap(day)
     return build_morning_card(
         day=day,
         taiex=taiex,
         overseas=overseas,
         fortunes=fortunes,
         context=context,
-        almanac=almanac_lines(almanac, readings),
+        group_sections=recap if with_recap else [],
     )
 
 
@@ -78,7 +76,8 @@ def run() -> None:
         logger.info("Already posted today, skipping")
         return
     deliver(
-        build_morning_payload(day),
+        # A dry run prints the card into a public Actions log.
+        build_morning_payload(day, with_recap=not args.dry_run),
         dry_run=args.dry_run,
         is_test=args.test,
         note=args.note,

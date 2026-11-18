@@ -43,8 +43,19 @@ def fortune(sign: str, stars: int) -> SignFortune:
     )
 
 
+def block_texts(blocks: list[dict]) -> list[str]:
+    texts: list[str] = []
+    for block in blocks:
+        texts += block_texts(block["items"]) if "items" in block else [block["text"]]
+    return texts
+
+
+def card_body(card: dict) -> list[dict]:
+    return card["attachments"][0]["content"]["body"]
+
+
 def card_texts(card: dict) -> list[str]:
-    return [block["text"] for block in card["attachments"][0]["content"]["body"]]
+    return block_texts(card_body(card))
 
 
 def test_quote_during_trading_is_stamped_with_its_time():
@@ -122,8 +133,34 @@ def test_morning_card_lists_names_stars_luckiest_sign_and_disclaimer():
     assert "財運 ★★★★☆" in texts
     assert "今日財運最旺：牡羊座" in texts
     assert "非投資建議" in texts
-    actions = card["attachments"][0]["content"]["actions"]
-    assert actions[0]["title"] == "看即時盤"
+
+
+def test_market_is_one_line_of_changes_without_prices():
+    card = build_morning_card(
+        day=MONDAY,
+        taiex=StockQuote("加權指數", 101, 100, "截至 09:05"),
+        overseas=[StockQuote("NVIDIA", 99, 100, "11/6 收盤")],
+        fortunes=[],
+        context=HoroscopeContext(),
+    )
+    assert card_texts(card)[1] == "📊 加權指數 ▲1.00% · NVIDIA ▼1.00%"
+
+
+def test_fortunes_start_hidden_behind_a_toggle_but_the_luckiest_sign_shows():
+    card = build_morning_card(
+        day=MONDAY,
+        taiex=None,
+        overseas=[],
+        fortunes=[fortune("牡羊座", 4)],
+        context=HoroscopeContext(),
+    )
+    hidden = [block for block in card_body(card) if block.get("isVisible") is False]
+    assert len(hidden) == 1 and "牡羊座" in "".join(block_texts(hidden))
+    shown = [block for block in card_body(card) if "text" in block]
+    assert any("今日財運最旺：牡羊座" in block["text"] for block in shown)
+    toggle, live = card["attachments"][0]["content"]["actions"]
+    assert toggle["targetElements"] == [hidden[0]["id"]]
+    assert live["title"] == "看即時盤"
 
 
 def test_morning_card_still_posts_when_market_and_horoscope_fail():
@@ -132,6 +169,7 @@ def test_morning_card_still_posts_when_market_and_horoscope_fail():
     )
     texts = "\n".join(card_texts(card))
     assert "股市資料暫時抓不到" in texts and "運勢暫時算不出來" in texts
+    assert len(card["attachments"][0]["content"]["actions"]) == 1
 
 
 def test_stock_name_links_to_its_quote_page():

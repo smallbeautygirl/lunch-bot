@@ -25,12 +25,10 @@ YAHOO_PARAMS = {"interval": "1d", "range": "5d"}
 YAHOO_QUOTE_PAGE_URL = "https://tw.stock.yahoo.com/quote/{symbol}"
 
 TAIEX = ("^TWII", "加權指數")
+# One line on the card: the two overnight closes this group actually watches.
+# Linker Vision's main platform partner is NVIDIA.
 OVERSEAS = (
-    ("^GSPC", "S&P 500"),
-    ("^IXIC", "那斯達克"),
-    ("^SOX", "費城半導體"),
     ("TSM", "台積電 ADR"),
-    # Linker Vision's main platform partner; the group follows it anyway.
     ("NVDA", "NVIDIA"),
 )
 

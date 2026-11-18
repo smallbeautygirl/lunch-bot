@@ -7,8 +7,8 @@ from .horoscope import SignFortune, luckiest_signs
 from .mafalda import PUBLISHER_URL, MafaldaReading
 from .mafalda import SOURCE_NAME as MAFALDA_SOURCE_NAME
 from .market import StockQuote
-from .sign_sources import MAX_STARS, SignSources
-from .teams import open_url_action, text_block, wrap_card
+from .sign_sources import MAX_STARS
+from .teams import container, open_url_action, text_block, toggle_action, wrap_card
 from .weekly_reading import SOURCE_NAME as TANG_SOURCE_NAME
 from .weekly_reading import WeeklyReading
 from .zodiac import SIGN_SYMBOLS
@@ -16,12 +16,12 @@ from .zodiac import SIGN_SYMBOLS
 WEEKDAY_NAMES = "一二三四五六日"
 LIVE_TAIEX_URL = "https://tw.stock.yahoo.com/quote/%5ETWII"
 DISCLAIMER = "運勢由 AI 產生，僅供娛樂；股市資訊非投資建議。"
+HOROSCOPE_ID = "horoscope"
 
 
 @dataclass(frozen=True)
 class HoroscopeContext:
     members: dict[str, list[str]] = field(default_factory=dict)
-    sources: dict[str, SignSources] = field(default_factory=dict)
     tang: WeeklyReading | None = None
     mafalda: MafaldaReading | None = None
 
@@ -32,31 +32,34 @@ def stock_line(quote: StockQuote) -> str:
     return f"{arrow} **{quote.linked_name}** {change}{quote.as_of}"
 
 
-def _market_blocks(taiex: StockQuote | None, overseas: list[StockQuote]) -> list[dict]:
-    blocks = [text_block("**📊 股市**", separator=True)]
-    if taiex:
-        blocks.append(text_block(stock_line(taiex)))
-    if overseas:
-        lines = "\n\n".join(stock_line(quote) for quote in overseas)
-        blocks.append(text_block(f"🌙 隔夜美股\n\n{lines}", spacing="Small"))
-    if len(blocks) == 1:
-        blocks.append(text_block("今天股市資料暫時抓不到 🙏"))
-    return blocks
+def _change(quote: StockQuote) -> str:
+    arrow = "▲" if quote.pct >= 0 else "▼"
+    return f"{quote.linked_name} {arrow}{abs(quote.pct):.2f}%"
+
+
+def _market_block(taiex: StockQuote | None, overseas: list[StockQuote]) -> dict:
+    """One line of changes; prices and timestamps are a tap away on 看即時盤."""
+    quotes = [quote for quote in [taiex, *overseas] if quote]
+    if not quotes:
+        return text_block("📊 今天股市資料暫時抓不到 🙏")
+    return text_block("📊 " + " · ".join(_change(quote) for quote in quotes))
+
+
+def _section(lines: list[str]) -> dict:
+    """A shaded box, so the card reads as a few blocks instead of one wall."""
+    blocks = [
+        text_block(lines[0]),
+        *(text_block(line, spacing="Small") for line in lines[1:]),
+    ]
+    return container(blocks, style="emphasis", spacing="Medium")
 
 
 def _stars(count: int) -> str:
     return "★" * count + "☆" * (MAX_STARS - count)
 
 
-def _source_labels(sources: SignSources | None) -> str:
-    return f"（{sources.label}）" if sources and sources.label else ""
-
-
-def _fortune_blocks(
-    fortune: SignFortune, names: list[str], sources: SignSources | None
-) -> list[dict]:
+def _fortune_blocks(fortune: SignFortune, names: list[str]) -> list[dict]:
     heading = f"**{SIGN_SYMBOLS[fortune.sign]} {fortune.sign}**"
-    heading += _source_labels(sources)
     if names:
         heading += f"　{'、'.join(names)}"
     wealth = f"財運 {_stars(fortune.wealth_stars)}"
@@ -89,17 +92,12 @@ def _credit_lines(
     return lines
 
 
-def _horoscope_blocks(
-    fortunes: list[SignFortune], context: HoroscopeContext
-) -> list[dict]:
-    blocks = [text_block("**🔮 今日星座運勢**", separator=True)]
-    if not fortunes:
-        return [*blocks, text_block("今天的運勢暫時算不出來 🙏")]
+def _horoscope_details(fortunes: list[SignFortune], context: HoroscopeContext) -> dict:
+    """Every sign's fortune, hidden until 星座運勢 is tapped: at seven signs
+    it is most of the card's length."""
+    blocks: list[dict] = []
     for fortune in fortunes:
-        names = context.members.get(fortune.sign, [])
-        blocks += _fortune_blocks(fortune, names, context.sources.get(fortune.sign))
-    luckiest = "、".join(luckiest_signs(fortunes))
-    blocks.append(text_block(f"💰 **今日財運最旺：{luckiest}**", spacing="Medium"))
+        blocks += _fortune_blocks(fortune, context.members.get(fortune.sign, []))
     if credits := _credit_lines(context.tang, context.mafalda):
         blocks.append(
             text_block(
@@ -109,7 +107,7 @@ def _horoscope_blocks(
                 spacing="Medium",
             )
         )
-    return blocks
+    return container(blocks, id=HOROSCOPE_ID, isVisible=False)
 
 
 def build_morning_card(
@@ -119,13 +117,19 @@ def build_morning_card(
     overseas: list[StockQuote],
     fortunes: list[SignFortune],
     context: HoroscopeContext,
-    almanac: list[str] | None = None,
+    group_sections: list[list[str]] | None = None,
 ) -> dict:
     title = f"☀️ 早安！{day.month}/{day.day}（{WEEKDAY_NAMES[day.weekday()]}）"
     body = [text_block(title, size="Large", weight="Bolder")]
-    body += _market_blocks(taiex, overseas)
-    if almanac:
-        body.append(text_block("\n\n".join(almanac), separator=True))
-    body += _horoscope_blocks(fortunes, context)
+    body.append(_market_block(taiex, overseas))
+    body += [_section(lines) for lines in group_sections or []]
+    actions = [open_url_action("看即時盤", LIVE_TAIEX_URL)]
+    if fortunes:
+        luckiest = "、".join(luckiest_signs(fortunes))
+        body.append(text_block(f"🔮 **今日財運最旺：{luckiest}**", spacing="Medium"))
+        body.append(_horoscope_details(fortunes, context))
+        actions.insert(0, toggle_action("星座運勢 展開／收起", HOROSCOPE_ID))
+    else:
+        body.append(text_block("🔮 今天的運勢暫時算不出來 🙏", spacing="Medium"))
     body.append(text_block(DISCLAIMER, isSubtle=True, size="Small", separator=True))
-    return wrap_card(body, actions=[open_url_action("看即時盤", LIVE_TAIEX_URL)])
+    return wrap_card(body, actions=actions)
