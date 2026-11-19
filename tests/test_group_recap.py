@@ -30,7 +30,9 @@ def serve(monkeypatch, saved: dict) -> None:
 
 def test_todays_recap_is_returned(monkeypatch):
     serve(monkeypatch, {"date": "2026-11-24", "recap": "大家聊了拉麵。"})
-    assert fetch_group_recap(TUESDAY) == [["💬 **昨日群組回顧**", "大家聊了拉麵。"]]
+    title, recap, scope = fetch_group_recap(TUESDAY)[0]
+    assert (title, recap) == ("💬 **昨日群組回顧**", "大家聊了拉麵。")
+    assert "健康" in scope
 
 
 def test_recap_written_for_another_day_is_not_shown(monkeypatch):

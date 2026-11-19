@@ -19,6 +19,8 @@ RECAP_URL = (
     "/contents/data/recap.json"
 )
 MONDAY = 0
+# People asked what the bot repeats; say it where they read the recap.
+RECAP_SCOPE = "_只寫輕鬆話題；健康、感情、金錢和工作上的事不會寫進回顧。_"
 
 
 def recap_title(day: date) -> str:
@@ -60,7 +62,7 @@ def fetch_group_recap(day: date) -> list[list[str]]:
 
 
 def recap_lines(day: date, recap: str) -> list[str]:
-    return [f"💬 **{recap_title(day)}**", recap] if recap else []
+    return [f"💬 **{recap_title(day)}**", recap, RECAP_SCOPE] if recap else []
 
 
 def board_lines(board: dict) -> list[str]:
