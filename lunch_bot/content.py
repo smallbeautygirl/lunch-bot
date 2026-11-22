@@ -22,7 +22,7 @@ JOKE_PROMPT = (
     "主題不限，好笑最重要。用台灣日常用語，笑點可以是國語或台語的諧音、"
     "一詞兩義，或是腦筋急轉彎式的答案。"
     "不要翻譯外國笑話，不要用中國大陸用語，不要需要專業知識的哏。"
-    "風格參考（不要照抄，也不要沿用同樣的主題）："
+    "風格參考（這四則都講過了，不能用，也不要沿用同樣的主題）："
     "Q 綠豆從樓上摔下來會變成什麼？A 紅豆，因為流血了。"
     "Q 為什麼飛機飛那麼高都不會撞到星星？A 因為星星會閃。"
     "Q 哪一種花最沒力？A 茉莉花（台語聽起來像「沒力」）。"
@@ -98,6 +98,10 @@ class Joke(BaseModel):
     answer: str
     explanation: str = ""
 
+    @property
+    def summary(self) -> str:
+        return f"Q {self.question} A {self.answer}"
+
 
 class EnglishLesson(BaseModel):
     word: str
@@ -165,6 +169,7 @@ def _build_prompt(
     topic: str,
     sources: SignSources | None = None,
     mood: Mood | None = None,
+    told_jokes: list[str] | None = None,
 ) -> str:
     lines = [f"今天是 {day.isoformat()}，請用台灣繁體中文，語氣輕鬆。"]
     if sign:
@@ -175,6 +180,11 @@ def _build_prompt(
         ExtraKind.TRIVIA: f"trivia：一則和「{topic}」有關、可查證的冷知識，一兩句。",
     }
     lines += [wanted[extra] for extra in extras]
+    if ExtraKind.JOKE in extras and told_jokes:
+        lines.append(
+            "下面這些笑話最近都講過了，不能重複，也不要用同一個謎底或同一組諧音："
+            + "；".join(told_jokes)
+        )
     lines.append("沒被要求的欄位留空。")
     return "\n".join(lines)
 
@@ -188,6 +198,7 @@ def generate_content(
     rng: random.Random,
     sources: SignSources | None = None,
     mood: Mood | None = None,
+    told_jokes: list[str] | None = None,
 ) -> DailyContent:
     """Never blocks the lunch post: on any API failure it returns empty
     content and the message goes out without the fun parts."""
@@ -200,6 +211,7 @@ def generate_content(
         topic=topic,
         sources=sources,
         mood=mood,
+        told_jokes=told_jokes,
     )
     if WORDPLAY_EXTRAS & set(extras):
         content = ask_claude(prompt, DailyContent, model=WORDPLAY_MODEL, effort="high")

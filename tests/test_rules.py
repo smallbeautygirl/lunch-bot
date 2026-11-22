@@ -5,8 +5,20 @@ from datetime import date
 
 from lunch_bot.calendar_tw import DayKind, classify_day
 from lunch_bot.card import build_holiday_card, build_workday_card, market_line
-from lunch_bot.content import DailyContent, EnglishLesson, ExtraKind, Joke, extras_for
-from lunch_bot.history import has_posted_on, recent_shop_ids
+from lunch_bot.content import (
+    DailyContent,
+    EnglishLesson,
+    ExtraKind,
+    Joke,
+    _build_prompt,
+    extras_for,
+)
+from lunch_bot.history import (
+    has_posted_on,
+    load_jokes,
+    recent_shop_ids,
+    record_joke,
+)
 from lunch_bot.market import Mood, StockQuote, fits_market, market_factor
 from lunch_bot.picker import Candidate, find_candidates, is_open_at, pick_suggestions
 from lunch_bot.teams import add_note, mark_as_test
@@ -359,3 +371,31 @@ def test_role_mix_counts_each_signs_roles_most_common_first():
     assert role_mix(["cat", "amy", "bob", "dan"], roles) == "RD×2、FAE×1"
     mixes = role_mixes({"牡羊座": ["amy", "cat"], "金牛座": ["dan"]}, roles)
     assert mixes == {"牡羊座": "RD×1、FAE×1"}
+
+
+def test_jokes_already_told_are_ruled_out_in_the_next_prompt(tmp_path):
+    path = tmp_path / "jokes.json"
+    record_joke(path, "Q 哪種動物最沒方向感？ A 麋鹿")
+    record_joke(path, "Q 哪種動物最沒方向感？ A 麋鹿")
+    assert load_jokes(path) == ["Q 哪種動物最沒方向感？ A 麋鹿"]
+    prompt = _build_prompt(
+        day=FRIDAY,
+        sign=None,
+        categories=[],
+        extras=[ExtraKind.JOKE],
+        topic="午餐",
+        told_jokes=load_jokes(path),
+    )
+    assert "不能重複" in prompt and "麋鹿" in prompt.split("不能重複")[1]
+
+
+def test_told_jokes_are_left_out_on_days_without_a_joke():
+    prompt = _build_prompt(
+        day=FRIDAY,
+        sign=None,
+        categories=[],
+        extras=[ExtraKind.TRIVIA],
+        topic="午餐",
+        told_jokes=["Q x A y"],
+    )
+    assert "Q x A y" not in prompt

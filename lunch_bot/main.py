@@ -13,9 +13,16 @@ from datetime import date, datetime
 
 from .calendar_tw import DayKind, classify_day, fetch_holiday_flags
 from .card import build_holiday_card, build_workday_card
-from .config import HISTORY_PATH, TAIPEI, read_lunch_chief
-from .content import extras_for, generate_content
-from .history import has_posted_on, load_history, recent_shop_ids, save_suggestion
+from .config import HISTORY_PATH, JOKES_PATH, TAIPEI, read_lunch_chief
+from .content import DailyContent, extras_for, generate_content
+from .history import (
+    has_posted_on,
+    load_history,
+    load_jokes,
+    recent_shop_ids,
+    record_joke,
+    save_suggestion,
+)
 from .lunch_map import load_lunch_map
 from .mafalda import fetch_mafalda_reading
 from .parking import fetch_parking_catalog
@@ -34,7 +41,9 @@ from .zodiac import ZODIAC_SIGNS, read_group_members
 logger = logging.getLogger(__name__)
 
 
-def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str]]:
+def build_workday_payload(
+    day: date, rng: random.Random
+) -> tuple[dict, list[str], DailyContent]:
     lunch_map = load_lunch_map(day)
     quote = fetch_stock(*TAIEX)
     excluded = recent_shop_ids(load_history(HISTORY_PATH), day)
@@ -60,6 +69,7 @@ def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str
         rng=rng,
         sources=sources,
         mood=quote.mood if quote else None,
+        told_jokes=load_jokes(JOKES_PATH),
     )
     picks = pick_suggestions(candidates, set(content.favored_categories), rng, quote)
     catalog = fetch_parking_catalog()
@@ -79,18 +89,19 @@ def build_workday_payload(day: date, rng: random.Random) -> tuple[dict, list[str
         parking=parking,
         parking_as_of=catalog.as_of if catalog else None,
     )
-    return card, [pick.shop["id"] for pick in picks]
+    return card, [pick.shop["id"] for pick in picks], content
 
 
-def build_holiday_payload(day: date, rng: random.Random) -> dict:
+def build_holiday_payload(day: date, rng: random.Random) -> tuple[dict, DailyContent]:
     content = generate_content(
         day=day,
         sign=None,
         categories=[],
         extras=extras_for(day, DayKind.NATIONAL_HOLIDAY),
         rng=rng,
+        told_jokes=load_jokes(JOKES_PATH),
     )
-    return build_holiday_card(day=day, content=content)
+    return build_holiday_card(day=day, content=content), content
 
 
 def run() -> None:
@@ -113,12 +124,14 @@ def run() -> None:
     rng = random.Random(day.isoformat())
     shop_ids: list[str] = []
     if kind is DayKind.WORKDAY:
-        payload, shop_ids = build_workday_payload(day, rng)
+        payload, shop_ids, content = build_workday_payload(day, rng)
     else:
-        payload = build_holiday_payload(day, rng)
+        payload, content = build_holiday_payload(day, rng)
     deliver(payload, dry_run=args.dry_run, is_test=args.test, note=args.note)
     if shop_ids and is_real_post:
         save_suggestion(HISTORY_PATH, day, shop_ids)
+    if content.joke and is_real_post:
+        record_joke(JOKES_PATH, content.joke.summary)
 
 
 if __name__ == "__main__":

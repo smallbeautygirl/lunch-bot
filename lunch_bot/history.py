@@ -45,3 +45,17 @@ def record_post_day(path: Path, today: date) -> None:
     days.append(today.isoformat())
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(days[-HISTORY_ENTRIES_KEPT:], indent=1))
+
+
+def load_jokes(path: Path) -> list[str]:
+    return json.loads(path.read_text()) if path.exists() else []
+
+
+def record_joke(path: Path, joke: str) -> None:
+    """Jokes already told, so the next prompt can rule them out: left to
+    itself the model comes back to the same few puns."""
+    jokes = [told for told in load_jokes(path) if told != joke]
+    jokes.append(joke)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    kept = jokes[-HISTORY_ENTRIES_KEPT:]
+    path.write_text(json.dumps(kept, ensure_ascii=False, indent=1))
