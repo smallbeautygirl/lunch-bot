@@ -59,6 +59,7 @@ jobs:
           LUNCH_CHIEF_NAME: ${{ vars.LUNCH_CHIEF_NAME }}
           GROUP_MEMBERS: ${{ secrets.GROUP_MEMBERS }}
           MEMBER_ROLES: ${{ secrets.MEMBER_ROLES }}
+          MEMBER_ALLERGENS: ${{ secrets.MEMBER_ALLERGENS }}
           TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
           TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
         run: |
