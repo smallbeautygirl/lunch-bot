@@ -20,7 +20,7 @@ RECAP_URL = (
 )
 MONDAY = 0
 # People asked what the bot repeats; say it where they read the recap.
-RECAP_SCOPE = "_客戶、案子名稱和公司內部的事不會寫進回顧。_"
+RECAP_SCOPE = "_客戶、案子名稱和公司機密不會寫進回顧。_"
 
 
 def recap_title(day: date) -> str:
