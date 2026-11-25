@@ -27,6 +27,10 @@ on:
         description: "Manual catch-up: post for real even past the deadline"
         type: boolean
         default: false
+      recap_only:
+        description: "Post only today's group recap, as a 補發 card (use with note)"
+        type: boolean
+        default: false
 
 permissions:
   # Writes data/morning_posts.json: same-day dedupe and the watchdog read it.
@@ -61,7 +65,9 @@ jobs:
           # manual catch-up). Any other dispatch that posts is
           # marked [測試中]. Real posts are skipped past 10:30: GitHub has
           # started runs 6+ hours late.
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "${{ inputs.recap_only }}" = "true" ]; then
+            python -m lunch_bot.recap_card --note "$NOTE"
+          elif [ "${{ inputs.dry_run }}" = "true" ]; then
             python -m lunch_bot.morning --dry-run --test --note "$NOTE" ${CARD_DATE:+--date "$CARD_DATE"}
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.post_for_real }}" != "true" ]; then
             python -m lunch_bot.morning --test --note "$NOTE"

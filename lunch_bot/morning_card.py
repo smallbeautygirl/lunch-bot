@@ -45,7 +45,7 @@ def _market_block(taiex: StockQuote | None, overseas: list[StockQuote]) -> dict:
     return text_block("📊 " + " · ".join(_change(quote) for quote in quotes))
 
 
-def _section(lines: list[str]) -> dict:
+def shaded_section(lines: list[str]) -> dict:
     """A shaded box, so the card reads as a few blocks instead of one wall."""
     blocks = [
         text_block(lines[0]),
@@ -122,7 +122,7 @@ def build_morning_card(
     title = f"☀️ 早安！{day.month}/{day.day}（{WEEKDAY_NAMES[day.weekday()]}）"
     body = [text_block(title, size="Large", weight="Bolder")]
     body.append(_market_block(taiex, overseas))
-    body += [_section(lines) for lines in group_sections or []]
+    body += [shaded_section(lines) for lines in group_sections or []]
     actions = [open_url_action("看即時盤", LIVE_TAIEX_URL)]
     if fortunes:
         luckiest = "、".join(luckiest_signs(fortunes))
