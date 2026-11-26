@@ -31,6 +31,7 @@ from .history import (
 )
 from .lunch_map import load_lunch_map
 from .mafalda import fetch_mafalda_reading
+from .optional import or_none
 from .parking import fetch_parking_catalog
 from .picker import find_candidates, pick_suggestions
 from .sign_sources import collect_sources
@@ -65,7 +66,9 @@ def build_workday_payload(
     members = read_group_members()
     sign = rng.choice(list(members) or ZODIAC_SIGNS)
     sources = collect_sources(
-        [sign], fetch_weekly_reading(day), fetch_mafalda_reading(day, [sign])
+        [sign],
+        or_none(fetch_weekly_reading, day),
+        or_none(fetch_mafalda_reading, day, [sign]),
     )[sign]
     content = generate_content(
         day=day,
@@ -81,7 +84,7 @@ def build_workday_payload(
     allergic = read_member_allergens()
     guesses = load_shop_allergens()
     picks = ensure_safe_pick(picks, candidates, guesses, allergic, rng)
-    catalog = fetch_parking_catalog()
+    catalog = or_none(fetch_parking_catalog)
     parking = (
         {pick.shop["id"]: catalog.near(pick.shop) for pick in picks} if catalog else {}
     )

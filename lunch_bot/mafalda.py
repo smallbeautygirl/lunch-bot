@@ -89,7 +89,13 @@ def find_articles(listing_html: str, day: date) -> dict[str, _ListedArticle]:
     for match in LISTING_PATTERN.finditer(listing_html):
         path, raw_sign, *raw_numbers = match.groups()
         numbers = tuple(int(number) for number in raw_numbers)
-        start, end = _week_dates(day, numbers)
+        try:
+            start, end = _week_dates(day, numbers)
+        except ValueError:
+            # A mistyped headline (「11.25~12.0」, 2026-11-26) is not a date;
+            # uncaught it took both of that day's cards down.
+            logger.warning("Skipping a 瑪法達 headline with an impossible date")
+            continue
         sign = _to_sign(raw_sign)
         if sign and start <= day <= end and sign not in articles:
             label = f"{start.month}/{start.day}–{end.month}/{end.day}"
@@ -166,7 +172,8 @@ def fetch_mafalda_reading(day: date, signs: list[str]) -> MafaldaReading | None:
             reading, standings = _read_sign(articles[sign], standings, sign)
             if reading:
                 readings[sign] = reading
-    except requests.RequestException:
+    except (requests.RequestException, ValueError):
+        # The pages are hand-written HTML: unreadable is as good as down.
         logger.warning("瑪法達 pages unavailable", exc_info=True)
         return None
     if not readings:

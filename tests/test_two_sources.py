@@ -128,3 +128,13 @@ def test_card_shows_the_clash_without_source_labels_and_credits_both():
     assert "牡羊座**（" not in texts
     assert "⚖️ 兩派說法不同：唐老師說累，瑪法達說旺" in texts
     assert tang.url in texts and "瑪法達星座運勢" in texts
+
+
+def test_headline_with_an_impossible_date_is_skipped_not_fatal():
+    def entry(path: str, sign: str, week: str) -> str:
+        link = f'<a href="/tw/v3/article/{path}">'
+        return f"{link}<h3>瑪法達星座運勢／{sign} {week}</h3></a>"
+
+    listing = entry("a1", "天蠍座", "11.25~12.0") + entry("b2", "牡羊座", "11.25~12.01")
+    articles = find_articles(listing, date(2026, 11, 26))
+    assert list(articles) == ["牡羊座"]

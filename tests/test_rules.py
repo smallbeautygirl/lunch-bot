@@ -20,6 +20,7 @@ from lunch_bot.history import (
     record_joke,
 )
 from lunch_bot.market import Mood, StockQuote, fits_market, market_factor
+from lunch_bot.optional import or_none
 from lunch_bot.picker import Candidate, find_candidates, is_open_at, pick_suggestions
 from lunch_bot.teams import add_note, mark_as_test
 from lunch_bot.travel import Travel, TravelMode, estimate_travel
@@ -399,3 +400,11 @@ def test_told_jokes_are_left_out_on_days_without_a_joke():
         told_jokes=["Q x A y"],
     )
     assert "Q x A y" not in prompt
+
+
+def test_optional_part_that_blows_up_yields_nothing_instead_of_crashing():
+    def broken(day: date) -> str:
+        raise ValueError("day is out of range for month")
+
+    assert or_none(broken, FRIDAY) is None
+    assert or_none(lambda: "ok") == "ok"

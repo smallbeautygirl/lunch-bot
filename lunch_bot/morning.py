@@ -16,6 +16,7 @@ from .history import load_post_days, record_post_day
 from .horoscope import generate_horoscope
 from .mafalda import fetch_mafalda_reading
 from .morning_card import HoroscopeContext, build_morning_card, stock_line
+from .optional import or_none
 from .roles import read_member_roles, role_mixes
 from .sign_sources import collect_sources
 from .stocks import TAIEX, fetch_overseas, fetch_stock
@@ -37,8 +38,8 @@ def build_morning_payload(day: date, *, with_recap: bool = False) -> dict:
     overseas = fetch_overseas()
     market_lines = [stock_line(quote) for quote in [taiex, *overseas] if quote]
     signs = list(members) or list(ZODIAC_SIGNS)
-    tang = fetch_weekly_reading(day)
-    mafalda = fetch_mafalda_reading(day, signs)
+    tang = or_none(fetch_weekly_reading, day)
+    mafalda = or_none(fetch_mafalda_reading, day, signs)
     sources = collect_sources(signs, tang, mafalda)
     fortunes = generate_horoscope(
         day=day,
@@ -48,7 +49,7 @@ def build_morning_payload(day: date, *, with_recap: bool = False) -> dict:
     )
     context = HoroscopeContext(members=members, tang=tang, mafalda=mafalda)
     # Fetched even when left out, so a dry run still shows the token works.
-    recap = fetch_group_recap(day)
+    recap = or_none(fetch_group_recap, day) or []
     return build_morning_card(
         day=day,
         taiex=taiex,
